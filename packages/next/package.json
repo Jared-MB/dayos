@@ -1,6 +1,6 @@
 {
   "name": "@dayos/next",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DayOS adapter for the Next App Router: windows with URLs of their own.",
   "keywords": [
     "react",
