@@ -1,8 +1,26 @@
 {
   "name": "@dayos/next",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "DayOS adapter for the Next App Router: windows with URLs of their own.",
+  "keywords": [
+    "react",
+    "next",
+    "nextjs",
+    "app-router",
+    "desktop",
+    "window",
+    "routing",
+    "dayos"
+  ],
+  "homepage": "https://github.com/Jared-MB/dayos/tree/main/packages/next#readme",
+  "bugs": "https://github.com/Jared-MB/dayos/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jared-MB/dayos.git",
+    "directory": "packages/next"
+  },
   "license": "MIT",
+  "author": "Jared Muñoz <amunozbaez669@gmail.com>",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -20,12 +38,13 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
+    "prepack": "tsdown",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "@dayos/core": "workspace:*",
+    "@dayos/core": "workspace:^",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
