@@ -17,12 +17,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A missing secret otherwise surfaces as ENEEDAUTH at the very last step,
+      # after the whole build has run. Drop this check when moving to trusted
+      # publishing, which authenticates without a token.
+      - name: Check the token is present
+        run: |
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "::error::NPM_TOKEN is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - uses: pnpm/action-setup@v4
 
+      # Node 24 rather than the 22 CI uses: it ships npm 11, and trusted
+      # publishing over OIDC needs npm >= 11.5.1, while Node 22 still ships
+      # npm 10.9. Provenance would work on either. tsdown allows >=24.11.0.
+      #
       # `registry-url` is what makes npm read NODE_AUTH_TOKEN when publishing.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
