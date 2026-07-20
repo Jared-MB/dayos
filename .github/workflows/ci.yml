@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push supersedes the run still going for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the version from the `packageManager` field, so CI and local
+      # development can't drift apart.
+      - uses: pnpm/action-setup@v4
+
+      # Node 22 because tsdown needs ^22.18.0 || >=24.11.0, which is the
+      # tightest constraint in the toolchain.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Fails if the lockfile doesn't match the manifests, instead of quietly
+      # resolving something else than what was committed.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      # Both build the core first: turbo chains them through `dependsOn`.
+      - name: Types
+        run: pnpm check-types
+
+      - name: Test
+        run: pnpm test
+
+      # Covers the two packages and the demo app.
+      - name: Build
+        run: pnpm build
