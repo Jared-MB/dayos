@@ -44,9 +44,16 @@ Merge once `ci` is green. **Then**, and not before:
 ```sh
 # 5. Tag on main
 git checkout main && git pull
-git tag -a v0.2.0 -m "v0.2.0"
-git push origin v0.2.0
+pnpm release:tag
 ```
+
+The version is read from the manifests rather than typed, and the tag is only
+pushed after it confirms you are on `main`, that `main` matches `origin`, that
+the working tree is clean, that both packages agree on the version, and that the
+tag does not exist yet. It prints what it is about to publish and asks first.
+
+Doing it by hand is `git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0`,
+with none of that checked.
 
 The tag push triggers `publish.yml`, which runs the tests and the build again,
 checks the tag against the manifests, and publishes `@dayos/core` first and
