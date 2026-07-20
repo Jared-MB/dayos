@@ -7,7 +7,8 @@
     "test": "turbo run test",
     "check-types": "turbo run check-types",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "release:tag": "bash scripts/release-tag.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",

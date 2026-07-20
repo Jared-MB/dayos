@@ -60,3 +60,6 @@ pnpm lint         # biome
 The adapter's tests resolve `@dayos/core` against the source rather than its
 `dist`, so no build is needed to run them. `check-types` and `build` do depend
 on the core's build, and turbo chains that for you.
+
+`main` takes no direct pushes: every commit needs a green `ci` check, so work
+goes through a branch. Cutting a release is [RELEASING.md](RELEASING.md).
