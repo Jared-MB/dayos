@@ -6,8 +6,9 @@ on:
 
 permissions:
   contents: read
-  # Lets npm attach a signed provenance attestation tying the tarball to this
-  # workflow run and commit.
+  # How the job authenticates: npm exchanges this OIDC token with the registry,
+  # which checks it against the trusted publisher configured on each package.
+  # There is no npm token anywhere in this workflow.
   id-token: write
 
 jobs:
@@ -19,10 +20,12 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      # `registry-url` is what makes npm read NODE_AUTH_TOKEN when publishing.
+      # Node 24 rather than the 22 CI uses: trusted publishing needs npm
+      # >= 11.5.1 and Node >= 22.14, and Node 24 ships npm 11.16 while Node 22
+      # still ships npm 10.9. tsdown allows >=24.11.0.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -52,11 +55,12 @@ jobs:
           echo "both packages are $tag"
 
       # Packed with pnpm and published with npm on purpose: only pnpm rewrites
-      # the `workspace:` protocol in the manifest, and only npm can attach
-      # provenance. Core first, since @dayos/next declares a peer on it.
+      # the `workspace:` protocol in the manifest, so publishing straight from
+      # the directory with npm would ship a literal `workspace:^` peer.
+      #
+      # No --provenance flag: trusted publishing attaches provenance on its own.
+      # Core first, since @dayos/next declares a peer on it.
       - name: Publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in core next; do
             name=$(node -p "require('./packages/$pkg/package.json').name")
@@ -68,6 +72,6 @@ jobs:
             fi
 
             tarball=$(cd "packages/$pkg" && pnpm pack --pack-destination "$RUNNER_TEMP" | tail -1)
-            npm publish "$tarball" --provenance --access public
+            npm publish "$tarball" --access public
             echo "published $name@$version"
           done
