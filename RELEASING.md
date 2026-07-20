@@ -25,8 +25,8 @@ a release goes through a branch like anything else.
 
 ```sh
 # 1. Branch off an up-to-date main
-git checkout main && git pull
-git checkout -b release/v0.2.0
+git switch main && git pull
+git switch -c release/v0.2.0
 
 # 2. Bump both packages to the same version
 pnpm --filter "@dayos/*" exec npm version 0.2.0 --no-git-tag-version
@@ -43,7 +43,7 @@ Merge once `ci` is green. **Then**, and not before:
 
 ```sh
 # 5. Tag on main
-git checkout main && git pull
+git switch main && git pull
 pnpm release:tag
 ```
 
@@ -99,12 +99,3 @@ Settings → Rules → Rulesets → `tags` → Enforcement `Disabled`, delete an
 recreate the tag, then set it back to `Active`. Do this only if nothing was
 published under it yet — if it was, the tag now describes what npm actually has,
 and moving it makes the two disagree.
-
-## After the release
-
-Consumers that pin exact versions need a bump of their own. The portfolio in
-`../porfolio` is one:
-
-```sh
-pnpm up @dayos/core @dayos/next
-```
