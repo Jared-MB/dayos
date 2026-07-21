@@ -1,9 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Fragment } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RoutedApp, windowMarker } from "../test/fixtures";
-import { setLocation } from "../test/next-router";
+import { routerState, setLocation } from "../test/next-router";
 import { RoutedDesktop, useDynamicWindows, WindowRouteProvider } from "./index";
 
 /**
@@ -149,6 +150,104 @@ describe("opening a document from the list", () => {
     expect(
       screen.getAllByText(windowMarker("/documents/violin.avif")),
     ).toHaveLength(1);
+  });
+});
+
+/**
+ * A document's window is the list's neighbor and not its child: the list is
+ * where you open one, not something it depends on. The server side of this is
+ * covered by landing straight on a document; this is the client side.
+ */
+describe("a document window stands on its own", () => {
+  it("stays open when the list that opened it closes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(tree("/documents", <p>LIST</p>));
+
+    navigate(rerender, "/documents/violin.avif", <p>VIOLIN</p>);
+    await user.click(screen.getByRole("button", { name: "close /documents" }));
+
+    expect(
+      screen.getByText(windowMarker("/documents/violin.avif")),
+    ).toBeTruthy();
+    expect(screen.queryByText(windowMarker("/documents"))).toBe(null);
+  });
+
+  // With the list gone the document is the only window left, so the URL is
+  // its own — not the exitHref that a genuinely empty desktop would get.
+  it("and keeps the URL on itself once the list is gone", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(tree("/documents", <p>LIST</p>));
+
+    navigate(rerender, "/documents/violin.avif", <p>VIOLIN</p>);
+    await user.click(screen.getByRole("button", { name: "close /documents" }));
+
+    expect(routerState.replace).toHaveBeenLastCalledWith(
+      "/documents/violin.avif",
+    );
+  });
+
+  it("still shows its own content, not the list's", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(tree("/documents", <p>LIST</p>));
+
+    navigate(rerender, "/documents/violin.avif", <p>VIOLIN</p>);
+    await user.click(screen.getByRole("button", { name: "close /documents" }));
+
+    expect(
+      windowFor("/documents/violin.avif").getByText("VIOLIN"),
+    ).toBeTruthy();
+  });
+});
+
+describe("the list window's own URL", () => {
+  // A document's URL passes through the list window: it's still the active one
+  // when the pathname has already moved on. Recording it as the list's last URL
+  // makes coming back to the list navigate to the document instead, which
+  // reopens the document's window as a side effect of opening the list.
+  it("stays the list's when a document is opened from it", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(tree("/documents", <p>LIST</p>));
+
+    navigate(rerender, "/documents/violin.avif", <p>VIOLIN</p>);
+    await user.click(screen.getByRole("button", { name: "close /documents" }));
+
+    await user.dblClick(screen.getByText("ICON(/documents)"));
+
+    expect(routerState.replace).toHaveBeenLastCalledWith("/documents");
+  });
+
+  it("so reopening it doesn't bring the document's window back", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(tree("/documents", <p>LIST</p>));
+
+    navigate(rerender, "/documents/violin.avif", <p>VIOLIN</p>);
+    await user.click(screen.getByRole("button", { name: "close /documents" }));
+    await user.click(
+      screen.getByRole("button", { name: "close /documents/violin.avif" }),
+    );
+
+    await user.dblClick(screen.getByText("ICON(/documents)"));
+    navigate(rerender, "/documents", <p>LIST</p>);
+
+    expect(screen.queryByText(windowMarker("/documents/violin.avif"))).toBe(
+      null,
+    );
+  });
+
+  // The reason the recording exists at all: a real subroute — one no other
+  // route claims — is the window's own URL and has to survive leaving it.
+  it("but still keeps a subroute no route of its own claims", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(tree("/documents", <p>LIST</p>));
+
+    navigate(rerender, "/documents/violin.avif/notes", <p>NOTES</p>);
+    await user.dblClick(screen.getByText("ICON(/)"));
+
+    await user.click(screen.getByText(windowMarker("/documents/violin.avif")));
+
+    expect(routerState.replace).toHaveBeenLastCalledWith(
+      "/documents/violin.avif/notes",
+    );
   });
 });
 

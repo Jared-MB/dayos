@@ -248,10 +248,15 @@ export function RoutedDesktop({
 
   useEffect(() => {
     if (!activeHref) return;
-    if (matchRoute(activeHref, pathname) === null) return;
+    // The URL has to belong to this window and not merely start with it. A
+    // document's URL passes through here while its list is still the active
+    // window, and asking only whether the href matches let the list record it
+    // as its own: coming back to the list then navigated to the document, and
+    // opening the list reopened a document window that had been closed.
+    if (findRoute(routes, pathname) !== activeHref) return;
 
     lastUrlByWindow.current.set(activeHref, currentUrl());
-  }, [activeHref, pathname]);
+  }, [activeHref, pathname, routes]);
 
   // Until someone touches the initial state, the URL the page loaded with wins.
   // If it matched no route — a 404, say — navigating to `exitHref` would drag
