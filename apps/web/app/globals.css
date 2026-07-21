@@ -156,3 +156,15 @@ body {
   background: var(--surface-strong);
   font-size: 0.875em;
 }
+
+.document-list {
+  padding-left: 1.25rem;
+}
+
+/* Fits the window it's in, whatever the visitor resizes it to. */
+.document {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
