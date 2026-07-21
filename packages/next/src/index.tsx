@@ -263,6 +263,10 @@ export function RoutedDesktop({
   // the visitor off a page they did want to see.
   const initialWindows = useRef(openWindows);
 
+  // The last URL this component navigated to itself, so the opener can tell a
+  // URL the desktop produced from one the visitor asked for.
+  const selfNavigatedTo = useRef<string | null>(null);
+
   // The URL follows the active window. `replace` and not `push` because
   // focusing a window isn't navigating: it would fill the history and the back
   // button would walk through every focus change instead of the pages visited.
@@ -273,7 +277,10 @@ export function RoutedDesktop({
       ? (lastUrlByWindow.current.get(activeWindowId) ?? activeHref ?? exitHref)
       : exitHref;
 
-    if (target !== currentUrl()) router.replace(target);
+    if (target !== currentUrl()) {
+      selfNavigatedTo.current = target;
+      router.replace(target);
+    }
   }, [openWindows, activeWindowId, activeHref, exitHref, router]);
 
   return (
@@ -282,7 +289,7 @@ export function RoutedDesktop({
       onOpenWindowsChange={setOpenWindows}
       openWindows={openWindows}
     >
-      <RouteWindowOpener />
+      <RouteWindowOpener selfNavigatedTo={selfNavigatedTo} />
       {children}
     </Desktop>
   );
@@ -299,8 +306,19 @@ export function RoutedDesktop({
  * own. Landing on a route opens its window; it deliberately doesn't close on
  * the way out, since focusing another window changes the URL and has no
  * business closing this one.
+ *
+ * It answers navigation the visitor performed, not navigation the desktop
+ * performed. The sync runs both ways, and closing the last window sends the URL
+ * to `exitHref` — a URL with a window of its own, which then opened, so closing
+ * the last window put the home window in its place. Where the desktop wrote the
+ * URL, the window state is already what it should be and there's nothing here
+ * left to do.
  */
-function RouteWindowOpener() {
+function RouteWindowOpener({
+  selfNavigatedTo,
+}: {
+  selfNavigatedTo: React.RefObject<string | null>;
+}) {
   const { routes } = useWindowRoutes();
   const { openWindow } = useDesktop();
   const pathname = usePathname();
@@ -308,8 +326,11 @@ function RouteWindowOpener() {
   const href = findRoute(routes, pathname);
 
   useEffect(() => {
-    if (href) openWindow(href);
-  }, [href, openWindow]);
+    if (!href) return;
+    if (selfNavigatedTo.current === currentUrl()) return;
+
+    openWindow(href);
+  }, [href, openWindow, selfNavigatedTo]);
 
   return null;
 }
