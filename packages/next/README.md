@@ -92,16 +92,56 @@ A window's `href` **is** its `DesktopApp` id — one identity, declared once.
 | `WindowRouteProvider` | Takes the layout's `children` as `content` and every route up front. Seeds the open window from the URL during render, which is what gets it into the server HTML. |
 | `RoutedDesktop` | `Desktop` with its window state delegated to the provider. Also the sole owner of the window → URL sync. |
 | `useWindowRoute()` | Returns the content of the containing app's route. Live while it's the current route, frozen once focus moves away. |
+| `useDynamicWindows(pattern)` | The windows a dynamic route has open right now, as `{ href, params }`. |
 
 `RoutedDesktop` accepts everything `Desktop` does except the window-state props,
 plus `exitHref` (default `"/"`) — where the URL goes when the last window
 closes.
 
+## Dynamic routes
+
+A route segment written `:like-this` matches anything, and the window is
+identified by the URL it matched — so one declaration stands for a window per
+document:
+
+```tsx
+const ROUTES = ["/", "/documents", "/documents/:file"];
+```
+
+The app can't spell those windows out the way it does the static ones, so it
+asks the desktop which are open:
+
+```tsx
+function DocumentApps() {
+  return useDynamicWindows("/documents/:file").map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell file={params.file} />
+    </DesktopApp>
+  ));
+}
+```
+
+Nothing else is needed: an ordinary `<Link href="/documents/violin.avif">` opens
+the document's window beside the list, and a visitor landing on that URL gets it
+in the server HTML.
+
+`params` is what the pattern filled in, decoded the way a Next page's own
+`params` are, so a window gets `sheet music.avif` and not `sheet%20music.avif`.
+The `href` keeps the URL's spelling — it's the window's identity.
+
+Declaring the pattern is what asks for a window per document. Leaving it out
+isn't a missing feature but the other reasonable behavior — `/documents` covers
+its subroutes, so the document opens *inside* the list's window and navigating
+there is navigating within it.
+
 ## Notes
 
-Routes are matched by longest prefix on whole segments: with `/docs` and
-`/docs/api` both declared, `/docs/api` opens the specific window, `/docs/setup`
-opens `/docs`, and `/docsy` opens neither.
+Routes are matched a segment at a time, most specific first: more segments win,
+and at the same depth a static segment beats a param. With `/docs`, `/docs/api`
+and `/docs/:page` declared, `/docs/api` opens the specific window, `/docs/setup`
+opens the param's, `/docs/a/b` opens `/docs/a`'s, and `/docsy` opens none. `/`
+is the exception to covering subroutes: it matches only itself, or every URL on
+the site would belong to the home window.
 
 Not every app has to be routed. One with a generated id simply has no URL, and
 the desktop treats it the same.

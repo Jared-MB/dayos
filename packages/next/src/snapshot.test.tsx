@@ -129,3 +129,31 @@ describe("while a window is the current route its content stays live", () => {
     expect(windowFor("/docs/api").getByText("CONTENT(/docs/api)")).toBeTruthy();
   });
 });
+
+/**
+ * Opening a subroute is what a link inside a window does, so the two windows
+ * end up on screen together. The parent has to go on showing its own page:
+ * it's the list you clicked from, and a list that turns into a copy of the
+ * document it opened is worse than no second window at all.
+ */
+describe("a window and its subroute's window are open at once", () => {
+  it("leaves the URL's content to the most specific window only", () => {
+    setLocation("/docs");
+    const { rerender } = render(tree("/docs"));
+
+    navigate(rerender, "/docs/api");
+
+    expect(screen.queryAllByText("CONTENT(/docs/api)")).toHaveLength(1);
+    expect(windowFor("/docs/api").getByText("CONTENT(/docs/api)")).toBeTruthy();
+  });
+
+  it("keeps the parent on its own page", () => {
+    setLocation("/docs");
+    const { rerender } = render(tree("/docs"));
+
+    navigate(rerender, "/docs/api");
+
+    expect(windowFor("/docs").getByText("CONTENT(/docs)")).toBeTruthy();
+    expect(windowFor("/docs").getByText("SEGMENT(/docs)")).toBeTruthy();
+  });
+});
