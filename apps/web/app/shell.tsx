@@ -14,11 +14,13 @@ import {
 } from "@dayos/core";
 import {
   RoutedDesktop,
+  type RouteParams,
   useDynamicWindows,
   useWindowRoute,
   WindowRouteProvider,
 } from "@dayos/next";
 import { findDocument } from "./documents/documents";
+import { findProject, findTask } from "./projects/projects";
 
 /**
  * Each window's href is also its app id. Declaring them here is what lets the
@@ -31,15 +33,50 @@ import { findDocument } from "./documents/documents";
  */
 const DOCUMENT_PATTERN = "/documents/:file";
 
-const ROUTES = ["/", "/about", "/documents", DOCUMENT_PATTERN] as const;
+/**
+ * Projects nest three deep, with a static route beside the dynamic one at each
+ * level below the first: `/projects/archive` competes with `/projects/:project`
+ * and `/projects/:project/new` with `/projects/:project/:task`. The desktop
+ * takes the more specific route, so the literal wins at the depth it appears.
+ */
+const PROJECT_PATTERN = "/projects/:project";
+const NEW_TASK_PATTERN = "/projects/:project/new";
+const TASK_PATTERN = "/projects/:project/:task";
 
-/** The apps declared one by one; the pattern's are rendered per instance. */
-const STATIC_ROUTES = ROUTES.filter((route) => route !== DOCUMENT_PATTERN);
+/**
+ * A pattern stands for as many windows as URLs visited, so it can't be rendered
+ * from the list the way a plain route can. `/projects/:project/new` belongs
+ * here despite ending in a literal: it still has a param, so it's one window
+ * per project rather than one window.
+ */
+const PATTERNS: readonly string[] = [
+  DOCUMENT_PATTERN,
+  PROJECT_PATTERN,
+  NEW_TASK_PATTERN,
+  TASK_PATTERN,
+];
+
+const ROUTES = [
+  "/",
+  "/about",
+  "/documents",
+  DOCUMENT_PATTERN,
+  "/projects",
+  "/projects/archive",
+  PROJECT_PATTERN,
+  NEW_TASK_PATTERN,
+  TASK_PATTERN,
+] as const;
+
+/** The apps declared one by one; the patterns' are rendered per instance. */
+const STATIC_ROUTES = ROUTES.filter((route) => !PATTERNS.includes(route));
 
 const TITLES: Record<string, string> = {
   "/": "Welcome",
   "/about": "About",
   "/documents": "Documents",
+  "/projects": "Projects",
+  "/projects/archive": "Archive",
 };
 
 function RoutedApp({ href }: { href: string }) {
@@ -78,37 +115,50 @@ function AppShell({ href }: { href: string }) {
 }
 
 /**
- * One app per open document. The hrefs come from the desktop, so opening a
- * document is an ordinary `<Link>` and nothing here keeps a list of which ones
- * have been visited.
+ * One app per open instance of a pattern. The hrefs come from the desktop, so
+ * opening one is an ordinary `<Link>` and nothing here keeps a list of which
+ * URLs have been visited.
  */
-function DocumentApps() {
-  const windows = useDynamicWindows(DOCUMENT_PATTERN);
+function PatternApps({
+  pattern,
+  title,
+  ...geometry
+}: {
+  pattern: string;
+  /**
+   * The window's name, from the params the pattern filled in rather than from
+   * the href taken apart again — the matching already worked out which thing
+   * this is.
+   */
+  title: (params: RouteParams) => string | undefined;
+} & Pick<
+  React.ComponentProps<typeof Window>,
+  "defaultPosition" | "defaultSize"
+>) {
+  const windows = useDynamicWindows(pattern);
 
-  // `params.file` rather than picking the href apart: the matching already
-  // worked out which document this is.
   return windows.map(({ href, params }) => (
     <DesktopApp id={href} key={href}>
-      <DocumentShell file={params.file} />
+      <PatternShell title={title(params)} {...geometry} />
     </DesktopApp>
   ));
 }
 
 /**
- * No icon: a document has no standing place on the desktop. It's opened from
- * the list, and closing its window is the end of it.
+ * No icon: a document or a task has no standing place on the desktop. It's
+ * opened from the list above it, and closing its window is the end of it.
  */
-function DocumentShell({ file }: { file: string | undefined }) {
+function PatternShell({
+  title,
+  ...geometry
+}: { title: string | undefined } & Pick<
+  React.ComponentProps<typeof Window>,
+  "defaultPosition" | "defaultSize"
+>) {
   const content = useWindowRoute();
-  const title = findDocument(file)?.name ?? file;
 
   return (
-    <Window
-      className="window"
-      defaultPosition={{ x: 220, y: 140 }}
-      defaultSize={{ width: 520, height: 460 }}
-      keepMounted
-    >
+    <Window className="window" keepMounted {...geometry}>
       <WindowHeader className="window-header">
         <WindowName className="window-title">{title}</WindowName>
         <WindowActions className="window-actions">
@@ -128,7 +178,40 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {STATIC_ROUTES.map((href) => (
           <RoutedApp href={href} key={href} />
         ))}
-        <DocumentApps />
+        <PatternApps
+          defaultPosition={{ x: 220, y: 140 }}
+          defaultSize={{ width: 520, height: 460 }}
+          pattern={DOCUMENT_PATTERN}
+          title={(params) => findDocument(params.file)?.name ?? params.file}
+        />
+        {/*
+          The three levels are staggered so opening one after another leaves all
+          of them visible at once, which is the thing worth looking at.
+        */}
+        <PatternApps
+          defaultPosition={{ x: 180, y: 120 }}
+          defaultSize={{ width: 520, height: 400 }}
+          pattern={PROJECT_PATTERN}
+          title={(params) =>
+            findProject(params.project)?.name ?? params.project
+          }
+        />
+        <PatternApps
+          defaultPosition={{ x: 260, y: 200 }}
+          defaultSize={{ width: 480, height: 340 }}
+          pattern={NEW_TASK_PATTERN}
+          title={(params) =>
+            `New task — ${findProject(params.project)?.name ?? params.project}`
+          }
+        />
+        <PatternApps
+          defaultPosition={{ x: 300, y: 240 }}
+          defaultSize={{ width: 480, height: 340 }}
+          pattern={TASK_PATTERN}
+          title={(params) =>
+            findTask(params.project, params.task)?.name ?? params.task
+          }
+        />
       </RoutedDesktop>
     </WindowRouteProvider>
   );
