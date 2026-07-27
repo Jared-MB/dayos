@@ -270,6 +270,12 @@ export function RoutedDesktop({
   // The URL follows the active window. `replace` and not `push` because
   // focusing a window isn't navigating: it would fill the history and the back
   // button would walk through every focus change instead of the pages visited.
+  //
+  // `scroll: false` is the same sentence applied to the viewport. After a
+  // navigation Next scrolls the new segment into view, which here means the
+  // window that just came to the front gets scrolled back to its top — closing
+  // a window sends the reader of the one underneath back to the first line.
+  // Nothing about the page changed, so nothing should move.
   useEffect(() => {
     if (openWindows === initialWindows.current) return;
 
@@ -279,7 +285,7 @@ export function RoutedDesktop({
 
     if (target !== currentUrl()) {
       selfNavigatedTo.current = target;
-      router.replace(target);
+      router.replace(target, { scroll: false });
     }
   }, [openWindows, activeWindowId, activeHref, exitHref, router]);
 

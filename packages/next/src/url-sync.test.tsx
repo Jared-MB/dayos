@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { RoutedApp, TEST_ROUTES, windowMarker } from "../test/fixtures";
-import { routerState, setLocation } from "../test/next-router";
+import { lastReplacedUrl, routerState, setLocation } from "../test/next-router";
 import { RoutedDesktop, WindowRouteProvider } from "./index";
 
 const mount = () =>
@@ -27,7 +27,24 @@ describe("the URL follows the active window", () => {
 
     await user.dblClick(icon("/github"));
 
-    expect(routerState.replace).toHaveBeenCalledWith("/github");
+    expect(lastReplacedUrl()).toBe("/github");
+  });
+
+  // Next scrolls the segment it just rendered into view. The segment here is a
+  // window that came to the front, on a page that was already on screen: with
+  // the default, closing a window scrolls whatever is underneath back to its
+  // first line, and a long window loses the reader's place every time another
+  // one opens or closes.
+  it("without scrolling the window that comes to the front", async () => {
+    const user = userEvent.setup();
+    setLocation("/");
+    mount();
+
+    await user.dblClick(icon("/github"));
+
+    expect(routerState.replace).toHaveBeenCalledWith("/github", {
+      scroll: false,
+    });
   });
 
   it("goes back to exitHref when the last window closes", async () => {
@@ -37,7 +54,7 @@ describe("the URL follows the active window", () => {
 
     await user.click(screen.getByRole("button", { name: "close /github" }));
 
-    expect(routerState.replace).toHaveBeenCalledWith("/");
+    expect(lastReplacedUrl()).toBe("/");
   });
 
   // Leaving lands on the exitHref, and that URL has a window of its own. It
@@ -120,11 +137,11 @@ describe("landing on a URL opens its window", () => {
     mount();
 
     await user.dblClick(icon("/github"));
-    expect(routerState.replace).toHaveBeenLastCalledWith("/github");
+    expect(lastReplacedUrl()).toBe("/github");
 
     await user.click(screen.getByText(windowMarker("/docs")));
 
-    expect(routerState.replace).toHaveBeenLastCalledWith("/docs?page=2");
+    expect(lastReplacedUrl()).toBe("/docs?page=2");
   });
 });
 

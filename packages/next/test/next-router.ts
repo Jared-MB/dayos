@@ -8,6 +8,8 @@ import { vi } from "vitest";
  */
 const listeners = new Set<() => void>();
 
+type NavigateOptions = { scroll?: boolean };
+
 let pathname = "/";
 
 function navigate(url: string) {
@@ -22,8 +24,10 @@ export const routerState = {
   get pathname() {
     return pathname;
   },
-  replace: vi.fn(navigate),
-  push: vi.fn(navigate),
+  // The options are recorded but not acted on: jsdom has nothing to scroll, and
+  // what the tests care about is that they were asked for.
+  replace: vi.fn((url: string, _options?: NavigateOptions) => navigate(url)),
+  push: vi.fn((url: string, _options?: NavigateOptions) => navigate(url)),
 };
 
 /**
@@ -32,9 +36,22 @@ export const routerState = {
  * up in an update loop that doesn't exist in a real app.
  */
 export const router = {
-  replace: (url: string) => routerState.replace(url),
-  push: (url: string) => routerState.push(url),
+  // The options go through as they came: what `replace` is asked to do besides
+  // changing the URL — not scrolling, in particular — is part of the behavior
+  // the tests are here to pin down.
+  replace: (url: string, options?: NavigateOptions) =>
+    routerState.replace(url, options),
+  push: (url: string, options?: NavigateOptions) =>
+    routerState.push(url, options),
 };
+
+/**
+ * The URL of the last `replace`, for the tests whose subject is which URL the
+ * desktop picks rather than how it navigates there. Asserting on the call
+ * itself would make every one of them repeat the options too, and then a change
+ * to the options would read as a change to all of them.
+ */
+export const lastReplacedUrl = () => routerState.replace.mock.lastCall?.[0];
 
 export const subscribePathname = (listener: () => void) => {
   listeners.add(listener);

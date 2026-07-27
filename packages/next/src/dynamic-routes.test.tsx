@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RoutedApp, windowMarker } from "../test/fixtures";
-import { routerState, setLocation } from "../test/next-router";
+import { lastReplacedUrl, setLocation } from "../test/next-router";
 import { RoutedDesktop, useDynamicWindows, WindowRouteProvider } from "./index";
 
 /**
@@ -181,9 +181,7 @@ describe("a document window stands on its own", () => {
     navigate(rerender, "/documents/violin.avif", <p>VIOLIN</p>);
     await user.click(screen.getByRole("button", { name: "close /documents" }));
 
-    expect(routerState.replace).toHaveBeenLastCalledWith(
-      "/documents/violin.avif",
-    );
+    expect(lastReplacedUrl()).toBe("/documents/violin.avif");
   });
 
   it("still shows its own content, not the list's", async () => {
@@ -213,7 +211,7 @@ describe("the list window's own URL", () => {
 
     await user.dblClick(screen.getByText("ICON(/documents)"));
 
-    expect(routerState.replace).toHaveBeenLastCalledWith("/documents");
+    expect(lastReplacedUrl()).toBe("/documents");
   });
 
   it("so reopening it doesn't bring the document's window back", async () => {
@@ -245,9 +243,7 @@ describe("the list window's own URL", () => {
 
     await user.click(screen.getByText(windowMarker("/documents/violin.avif")));
 
-    expect(routerState.replace).toHaveBeenLastCalledWith(
-      "/documents/violin.avif/notes",
-    );
+    expect(lastReplacedUrl()).toBe("/documents/violin.avif/notes");
   });
 });
 
