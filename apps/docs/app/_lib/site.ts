@@ -16,4 +16,4 @@ export const SITE_DESCRIPTION =
 export const REPOSITORY = "https://github.com/Jared-MB/dayos";
 
 /** The example desktop that lives in the repo, linked from the docs. */
-export const EXAMPLE_APP = `${REPOSITORY}/tree/main/apps/web`;
+export const EXAMPLE_APP = `${REPOSITORY}/tree/main/apps/examples/nextjs`;
