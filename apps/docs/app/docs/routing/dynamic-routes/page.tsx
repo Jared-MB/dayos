@@ -1,0 +1,211 @@
+import { CodeBlock } from "../../../_components/code";
+import { DocPage, docMetadata } from "../../../_components/doc-page";
+import { Callout, Code, H2, H3 } from "../../../_components/prose";
+
+const HREF = "/docs/routing/dynamic-routes";
+
+export const metadata = docMetadata(HREF);
+
+export default function Page() {
+  return (
+    <DocPage href={HREF}>
+      <p>
+        A static route is one window. A pattern stands for as many windows as
+        URLs visited — one per document, task or record — which means it cannot
+        be rendered from a list the way a static route can. There is a hook for
+        that.
+      </p>
+
+      <H2>Declaring a pattern</H2>
+
+      <p>
+        A segment written <Code>:like-this</Code> matches anything. Patterns go
+        in the same <Code>routes</Code> array as everything else:
+      </p>
+
+      <CodeBlock filename="app/shell.tsx">{`const ROUTES = [
+  "/",
+  "/documents",
+  "/documents/:file",
+] as const;`}</CodeBlock>
+
+      <Callout>
+        <p>
+          This is DayOS&rsquo;s own syntax and has nothing to do with
+          Next&rsquo;s folder names. Next still wants{" "}
+          <Code>app/documents/[file]/page.tsx</Code> on disk; the colon form is
+          how the desktop is told that this route means many windows.
+        </p>
+      </Callout>
+
+      <H2>Rendering one app per open window</H2>
+
+      <p>
+        <Code>useDynamicWindows</Code> returns the windows a pattern has open
+        right now, with the params each one resolved to:
+      </p>
+
+      <CodeBlock filename="app/shell.tsx">{`import { useDynamicWindows, type RouteParams } from "@dayos/next";
+
+function DocumentApps() {
+  const windows = useDynamicWindows("/documents/:file");
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell title={params.file} />
+    </DesktopApp>
+  ));
+}`}</CodeBlock>
+
+      <p>
+        The list comes from the desktop&rsquo;s open windows, not from state of
+        your own. The desktop already knows which documents are open, and a
+        second copy of that would be one more thing to keep in sync.
+      </p>
+
+      <H3>Why params come along</H3>
+
+      <p>
+        The matching already worked out what <Code>:file</Code> stood for.
+        Without handing it back, every caller would take the href apart again to
+        recover what the pattern had just told it. They arrive decoded, the way
+        a Next page&rsquo;s params do, so a window gets the name of the thing
+        rather than its URL spelling.
+      </p>
+
+      <CodeBlock>{`function DocumentApps() {
+  const windows = useDynamicWindows("/documents/:file");
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell title={findDocument(params.file)?.name ?? params.file} />
+    </DesktopApp>
+  ));
+}`}</CodeBlock>
+
+      <H2>Windows with no icon</H2>
+
+      <p>
+        A document or a task has no standing place on the desktop: it is opened
+        from the list above it, and closing its window is the end of it. So the
+        app for a pattern instance usually renders a window and nothing else.
+      </p>
+
+      <CodeBlock>{`function DocumentShell({ title }: { title: string }) {
+  const content = useWindowRoute();
+
+  return (
+    <Window
+      className="window"
+      defaultPosition={{ x: 220, y: 140 }}
+      defaultSize={{ width: 520, height: 460 }}
+      keepMounted
+    >
+      <WindowHeader className="window-header">
+        <WindowName className="window-title">{title}</WindowName>
+        <WindowActions className="window-actions">
+          <WindowExpand className="window-button">▢</WindowExpand>
+          <WindowClose className="window-button">✕</WindowClose>
+        </WindowActions>
+      </WindowHeader>
+      <WindowContent className="window-content">{content}</WindowContent>
+    </Window>
+  );
+}`}</CodeBlock>
+
+      <H2>Opening one</H2>
+
+      <p>
+        Nothing special. The window&rsquo;s href is the URL, so a{" "}
+        <Code>Link</Code> opens it, and nothing in your code keeps a list of
+        which documents have been visited:
+      </p>
+
+      <CodeBlock filename="app/documents/page.tsx">{`export default function DocumentsPage() {
+  return (
+    <ul>
+      {DOCUMENTS.map(({ file, name }) => (
+        <li key={file}>
+          <Link href={\`/documents/\${file}\`}>{name}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}`}</CodeBlock>
+
+      <p>
+        Opening a document leaves the list window alone. The list stays on its
+        own page while the document gets a window of its own beside it — which
+        is the behavior you would have to build by hand in a tabbed interface.
+      </p>
+
+      <H2>Nesting</H2>
+
+      <p>
+        Patterns nest as deep as you like, and each level is a separate
+        declaration:
+      </p>
+
+      <CodeBlock>{`const ROUTES = [
+  "/projects",
+  "/projects/archive",
+  "/projects/:project",
+  "/projects/:project/new",
+  "/projects/:project/:task",
+] as const;`}</CodeBlock>
+
+      <p>
+        Stagger the geometry so opening one after another leaves all of them
+        visible at once:
+      </p>
+
+      <CodeBlock>{`<PatternApps
+  defaultPosition={{ x: 180, y: 120 }}
+  pattern="/projects/:project"
+/>
+<PatternApps
+  defaultPosition={{ x: 300, y: 240 }}
+  pattern="/projects/:project/:task"
+/>`}</CodeBlock>
+
+      <Callout
+        type="warning"
+        title="A pattern with a literal last segment is still a pattern"
+      >
+        <p>
+          <Code>/projects/:project/new</Code> ends in a literal, but it still
+          has a param — so it is one window per project rather than one window,
+          and it belongs with the patterns rather than in the list of static
+          routes.
+        </p>
+      </Callout>
+
+      <H2>Splitting the list</H2>
+
+      <p>
+        Static routes are rendered one by one; patterns are rendered per
+        instance. Deriving the first list from the second keeps them from
+        drifting:
+      </p>
+
+      <CodeBlock filename="app/shell.tsx">{`const PATTERNS: readonly string[] = [
+  "/documents/:file",
+  "/projects/:project",
+  "/projects/:project/new",
+  "/projects/:project/:task",
+];
+
+const STATIC_ROUTES = ROUTES.filter((route) => !PATTERNS.includes(route));`}</CodeBlock>
+
+      <H2>What a pattern does not claim</H2>
+
+      <p>
+        Only the windows the pattern itself owns come back from the hook.
+        Declaring <Code>/documents/new</Code> alongside{" "}
+        <Code>/documents/:file</Code> keeps that one out of the list: its window
+        belongs to the specific route, not to the pattern. Which route wins is{" "}
+        <a href="/docs/routing/matching">route matching</a>.
+      </p>
+    </DocPage>
+  );
+}
