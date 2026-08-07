@@ -755,13 +755,29 @@ h3:hover > .heading-anchor,
   padding: 0 1rem;
 }
 
-/* A diff line spans the block's full width, so its tint reaches both edges no
-   matter how far the code scrolls. */
+/*
+ * A diff's lines are grid rows. A row stretches to the width of the grid, and
+ * `min-width: max-content` above makes that the width of the longest line, so a
+ * tinted line reaches the right-hand edge of code that scrolls rather than
+ * stopping at the visible box.
+ *
+ * `inline-block` was the obvious way to do this and it collapses: `pre` sets
+ * `white-space: pre`, so the lines never wrap and all of them end up side by
+ * side on one enormous row.
+ */
+.code-pre code[data-diff] {
+  display: grid;
+  /* The padding moves to the lines, so their tint reaches the block's edges. */
+  padding: 0;
+}
+
 .code-line {
-  display: inline-block;
-  min-width: 100%;
   padding: 0 1rem;
-  margin: 0 -1rem;
+  /*
+   * A blank line is an empty grid row and would otherwise have no height at
+   * all. Tied to `.code-pre`'s line-height: change one, change the other.
+   */
+  min-height: 1.7em;
 }
 
 .code-line[data-added] {

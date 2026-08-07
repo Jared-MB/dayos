@@ -44,7 +44,13 @@ export function CodeBlock({
       )}
 
       <pre className="code-pre">
-        <code>
+        {/*
+          A diff lays its lines out as grid rows, which is what the stylesheet
+          keys off. The line break between rows is the grid's doing, so the
+          lines carry no newline of their own — one inside a row would render as
+          a second, blank line.
+        */}
+        <code data-diff={isDiff ? "" : undefined}>
           {isDiff ? (
             code.split("\n").map((line, index) => (
               <span
@@ -57,7 +63,6 @@ export function CodeBlock({
                 key={index}
               >
                 <Tokens code={line} language={language} />
-                {"\n"}
               </span>
             ))
           ) : (
