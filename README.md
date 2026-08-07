@@ -45,13 +45,14 @@ is a flex column.
 
 ```
 apps/web         Demo of both pieces: desktop, windows and URLs.
+apps/docs        The documentation site.
 packages/core    @dayos/core
 packages/next    @dayos/next
 ```
 
 ```sh
 pnpm install
-pnpm dev          # demo at http://localhost:3000
+pnpm dev          # demo at http://localhost:3000, docs at http://localhost:3001
 pnpm test         # vitest across both packages
 pnpm check-types
 pnpm lint         # biome
