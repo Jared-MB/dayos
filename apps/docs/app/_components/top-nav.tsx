@@ -1,10 +1,9 @@
 import Link from "next/link";
+import { REPOSITORY } from "../_lib/site";
 import { Search } from "./search";
 import { ThemeToggle } from "./theme-toggle";
 
 const VERSION = "0.2.2";
-
-const REPOSITORY = "https://github.com/Jared-MB/dayos";
 
 export function TopNav() {
   return (

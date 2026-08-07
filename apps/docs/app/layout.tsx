@@ -1,15 +1,37 @@
 import type { Metadata } from "next";
 import { THEME_SCRIPT } from "./_components/theme-toggle";
 import { TopNav } from "./_components/top-nav";
+import { SITE_URL } from "./_lib/site";
 import "./globals.css";
 
+const TITLE = "DayOS — A windowed desktop for React";
+
+const DESCRIPTION =
+  "A desktop with draggable windows for React: icons, windows you can move, resize and maximize, and a focus stack. No styling of its own and no knowledge of routes.";
+
 export const metadata: Metadata = {
+  // Without this the relative URLs below stay relative, and a link shared
+  // anywhere off the site loses its card.
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "DayOS — A windowed desktop for React",
+    default: TITLE,
     template: "%s",
   },
-  description:
-    "A desktop with draggable windows for React: icons, windows you can move, resize and maximize, and a focus stack. No styling of its own and no knowledge of routes.",
+  description: DESCRIPTION,
+  alternates: {
+    canonical: "./",
+  },
+  // No title or description here on purpose: naming them would freeze the
+  // root's pair onto every page's card. Left out, each page's own title and
+  // description fill them in.
+  openGraph: {
+    type: "website",
+    siteName: "DayOS",
+    url: "./",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

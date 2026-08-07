@@ -9,6 +9,7 @@ import {
   Step,
   Steps,
 } from "../../_components/prose";
+import { EXAMPLE_APP } from "../../_lib/site";
 
 const HREF = "/docs/quick-start";
 
@@ -273,10 +274,7 @@ export function MyDesktop() {
         <Card href="/docs/routing" title="Windows with URLs">
           Give each of these windows a route of its own.
         </Card>
-        <Card
-          href="https://github.com/Jared-MB/dayos/tree/main/apps/web"
-          title="The example app"
-        >
+        <Card href={EXAMPLE_APP} title="The example app">
           A working desktop with static routes, dynamic ones and nesting.
         </Card>
       </Cards>
