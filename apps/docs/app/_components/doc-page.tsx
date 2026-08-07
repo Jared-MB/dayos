@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { findPage, sectionOf, siblings } from "../_lib/nav";
+import { findPage, markdownHref, sectionOf, siblings } from "../_lib/nav";
+import { CopyPage } from "./copy-page";
 
 /**
  * The frame around a page's prose: breadcrumb, title, description and the
@@ -29,7 +30,10 @@ export function DocPage({
     <div className="doc-page">
       <article className="doc-article" id="doc-article">
         <header className="doc-header">
-          {section ? <p className="doc-breadcrumb">{section.title}</p> : null}
+          <div className="doc-header-top">
+            {section ? <p className="doc-breadcrumb">{section.title}</p> : null}
+            <CopyPage href={href} />
+          </div>
           <h1>{page.title}</h1>
           <p className="doc-description">{page.description}</p>
         </header>
@@ -80,5 +84,13 @@ export function docMetadata(href: string): Metadata {
   return {
     title: `${page.title} — DayOS`,
     description: page.description,
+    // The Markdown twin, announced in the head so something crawling the page
+    // can take the plain version without being told about it. `canonical` is
+    // repeated because a page's `alternates` replaces the root's rather than
+    // merging with it, and dropping it here would drop it from every doc page.
+    alternates: {
+      canonical: href,
+      types: { "text/markdown": markdownHref(href) },
+    },
   };
 }

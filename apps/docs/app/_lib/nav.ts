@@ -5,6 +5,8 @@
  * apart the way they would if each kept its own list.
  */
 
+import { SITE_URL } from "./site";
+
 export type DocPage = {
   href: string;
   title: string;
@@ -178,6 +180,17 @@ export const siblings = (href: string) => {
 
   return { previous: PAGES[index - 1], next: PAGES[index + 1] };
 };
+
+/**
+ * Where a page's Markdown twin lives: the same path with `.md` on the end, so
+ * `/docs` becomes `/docs.md` and every other page gains a sibling of its own.
+ * It lives here rather than beside the routes that serve it because the button
+ * offering it runs in the browser, and must not drag the pages in with it.
+ */
+export const markdownHref = (href: string) => `${href}.md`;
+
+export const markdownUrl = (href: string) =>
+  new URL(markdownHref(href), SITE_URL).toString();
 
 /** The section a page belongs to, for the breadcrumb above its title. */
 export const sectionOf = (href: string) =>
