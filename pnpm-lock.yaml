@@ -46,14 +46,14 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
 
-  apps/web:
+  apps/examples/nextjs:
     dependencies:
       '@dayos/core':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../../packages/core
       '@dayos/next':
         specifier: workspace:*
-        version: link:../../packages/next
+        version: link:../../../packages/next
       next:
         specifier: 16.2.10
         version: 16.2.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -66,7 +66,7 @@ importers:
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../../packages/typescript-config
+        version: link:../../../packages/typescript-config
       '@types/node':
         specifier: 22.15.3
         version: 22.15.3

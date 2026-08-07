@@ -44,11 +44,15 @@ is a flex column.
 ## This repo
 
 ```
-apps/web         Demo of both pieces: desktop, windows and URLs.
-apps/docs        The documentation site.
-packages/core    @dayos/core
-packages/next    @dayos/next
+apps/examples/nextjs   Demo of both pieces: desktop, windows and URLs.
+apps/docs              The documentation site.
+packages/core          @dayos/core
+packages/next          @dayos/next
 ```
+
+`apps/examples` holds one app per framework. Today there's only the Next one,
+which is the only place `@dayos/next` can be shown at all; the ones that come
+later will use `@dayos/core` on its own.
 
 ```sh
 pnpm install

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { REPOSITORY } from "../_lib/site";
+import { EXAMPLE_APP, REPOSITORY } from "../_lib/site";
 import { Search } from "./search";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -30,7 +30,7 @@ export function TopNav() {
           */}
           <a
             className="top-nav-link"
-            href={`${REPOSITORY}/tree/main/apps/web`}
+            href={EXAMPLE_APP}
             rel="noreferrer"
             target="_blank"
           >
