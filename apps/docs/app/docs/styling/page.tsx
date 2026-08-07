@@ -148,8 +148,8 @@ overflow: auto;`}</CodeBlock>
 
       <p>
         Icons are real buttons and windows are focusable, so both get the
-        browser&rsquo;s focus ring by default. If you replace it, replace it —
-        the desktop is a keyboard-navigable surface, and an icon whose focus is
+        browser’s focus ring by default. If you replace it, replace it — the
+        desktop is a keyboard-navigable surface, and an icon whose focus is
         invisible cannot be found.
       </p>
 

@@ -27,9 +27,9 @@ export default function Page() {
       <H2>WindowRouteProvider</H2>
 
       <p>
-        The outermost piece. It takes the layout&rsquo;s children and every
-        route up front, and seeds the open window from the URL during render —
-        which is what gets the right window into the server HTML.
+        The outermost piece. It takes the layout’s children and every route up
+        front, and seeds the open window from the URL during render — which is
+        what gets the right window into the server HTML.
       </p>
 
       <PropsTable
@@ -112,8 +112,8 @@ export default function Page() {
           nothing should move.
         </li>
         <li>
-          It remembers each window&rsquo;s last real URL, query and hash
-          included. Returning to a window does not wipe the params it had.
+          It remembers each window’s last real URL, query and hash included.
+          Returning to a window does not wipe the params it had.
         </li>
         <li>
           A window whose id no route claims is left alone — an unrouted app does
@@ -124,8 +124,8 @@ export default function Page() {
       <H2>useWindowRoute</H2>
 
       <p>
-        The content of the containing app&rsquo;s route. Live while that route
-        is current, frozen once focus moves elsewhere.
+        The content of the containing app’s route. Live while that route is
+        current, frozen once focus moves elsewhere.
       </p>
 
       <CodeBlock>{`function AppShell() {
@@ -181,9 +181,9 @@ export default function Page() {
 ))}`}</CodeBlock>
 
       <p>
-        The list comes from the desktop&rsquo;s open windows rather than from
-        state of your own — the desktop already knows which documents are open.
-        Only windows the pattern itself claims are returned, so declaring{" "}
+        The list comes from the desktop’s open windows rather than from state of
+        your own — the desktop already knows which documents are open. Only
+        windows the pattern itself claims are returned, so declaring{" "}
         <Code>/documents/new</Code> alongside <Code>/documents/:file</Code>{" "}
         keeps that one out of the list.
       </p>
@@ -191,8 +191,8 @@ export default function Page() {
       <H2>RouteParams</H2>
 
       <p>
-        What a pattern&rsquo;s params resolved to, keyed by the name after the
-        colon. Values arrive decoded, the way a Next page&rsquo;s params do.
+        What a pattern’s params resolved to, keyed by the name after the colon.
+        Values arrive decoded, the way a Next page’s params do.
       </p>
 
       <CodeBlock>{`type RouteParams = Record<string, string>;`}</CodeBlock>
@@ -214,11 +214,11 @@ export default function Page() {
       <Callout type="warning">
         <p>
           The adapter imports <Code>LayoutRouterContext</Code> from{" "}
-          <Code>next/dist</Code>, which is not part of Next&rsquo;s public API.
-          It is the price of per-window content without parallel routes. If a
-          Next update moves that module the package stops compiling, which is
-          the loud failure rather than the quiet one — but it is worth knowing
-          the coupling is there.
+          <Code>next/dist</Code>, which is not part of Next’s public API. It is
+          the price of per-window content without parallel routes. If a Next
+          update moves that module the package stops compiling, which is the
+          loud failure rather than the quiet one — but it is worth knowing the
+          coupling is there.
         </p>
       </Callout>
     </DocPage>

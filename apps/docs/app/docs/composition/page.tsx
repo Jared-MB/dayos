@@ -29,8 +29,8 @@ export default function Page() {
 
       <p>
         The result is an anchor that navigates when clicked and opens the window
-        when double clicked, with the icon&rsquo;s keyboard handling intact. It
-        is one element, not a link wrapped around a button.
+        when double clicked, with the icon’s keyboard handling intact. It is one
+        element, not a link wrapped around a button.
       </p>
 
       <Callout>
@@ -85,9 +85,9 @@ export default function Page() {
 </WindowClose>`}</CodeBlock>
 
       <p>
-        The same applies to <Code>DesktopIcon</Code>&rsquo;s{" "}
+        The same applies to <Code>DesktopIcon</Code>’s{" "}
         <Code>onDoubleClick</Code> and <Code>onKeyDown</Code>, and to{" "}
-        <Code>WindowExpand</Code>&rsquo;s <Code>onClick</Code>.
+        <Code>WindowExpand</Code>’s <Code>onClick</Code>.
       </p>
 
       <H2>Wrapping a DayOS component</H2>

@@ -160,10 +160,10 @@ overflow: hidden;`}</CodeBlock>
       <H2>DesktopIcon</H2>
 
       <p>
-        A <Code>button</Code> that opens its app&rsquo;s window on double click,
-        or on <kbd>Enter</kbd> / <kbd>Space</kbd>. Your{" "}
-        <Code>onDoubleClick</Code> and <Code>onKeyDown</Code> run first and can
-        cancel the open with <Code>preventDefault()</Code>.
+        A <Code>button</Code> that opens its app’s window on double click, or on{" "}
+        <kbd>Enter</kbd> / <kbd>Space</kbd>. Your <Code>onDoubleClick</Code> and{" "}
+        <Code>onKeyDown</Code> run first and can cancel the open with{" "}
+        <Code>preventDefault()</Code>.
       </p>
 
       <PropsTable rows={[renderRow("button"), passthroughRow("button")]} />
@@ -171,8 +171,8 @@ overflow: hidden;`}</CodeBlock>
       <H2>DesktopIconText</H2>
 
       <p>
-        The icon&rsquo;s label, as a <Code>span</Code>. It exists so the label
-        is a styleable element rather than a bare text node.
+        The icon’s label, as a <Code>span</Code>. It exists so the label is a
+        styleable element rather than a bare text node.
       </p>
 
       <PropsTable rows={[renderRow("span"), passthroughRow("span")]} />
@@ -303,8 +303,8 @@ overflow: hidden;`}</CodeBlock>
       <H2>WindowName</H2>
 
       <p>
-        The window&rsquo;s title, as an <Code>h2</Code>. It supplies the id the
-        dialog is labelled by, so every window should have one.
+        The window’s title, as an <Code>h2</Code>. It supplies the id the dialog
+        is labelled by, so every window should have one.
       </p>
 
       <PropsTable rows={[renderRow("h2"), passthroughRow("h2")]} />
@@ -369,8 +369,8 @@ overflow: auto;`}</CodeBlock>
       <H2>WindowClose</H2>
 
       <p>
-        Closes the window, through the app&rsquo;s <Code>close</Code> so the
-        change also reaches whoever controls it from outside. Labelled{" "}
+        Closes the window, through the app’s <Code>close</Code> so the change
+        also reaches whoever controls it from outside. Labelled{" "}
         <Code>&quot;Close window&quot;</Code> unless you pass your own{" "}
         <Code>aria-label</Code>.
       </p>
@@ -380,8 +380,7 @@ overflow: auto;`}</CodeBlock>
       <H2>useDesktop</H2>
 
       <p>
-        The desktop&rsquo;s state and controls. Throws outside{" "}
-        <Code>Desktop</Code>.
+        The desktop’s state and controls. Throws outside <Code>Desktop</Code>.
       </p>
 
       <CodeBlock>{`const {

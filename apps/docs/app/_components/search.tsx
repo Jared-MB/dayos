@@ -203,9 +203,7 @@ export function Search() {
             </div>
 
             {results.length === 0 ? (
-              <p className="search-empty">
-                No results for &ldquo;{query.trim()}&rdquo;
-              </p>
+              <p className="search-empty">No results for “{query.trim()}”</p>
             ) : (
               /*
                 A div and not a ul: the options are the buttons themselves, and
