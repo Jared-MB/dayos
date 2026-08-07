@@ -20,8 +20,8 @@ export default function Page() {
 
       <p>
         A route only has to cover the start of the pathname. Given{" "}
-        <Code>/docs</Code>, the URL <Code>/docs/api</Code> is that
-        window&rsquo;s too, and its href stays <Code>/docs</Code>.
+        <Code>/docs</Code>, the URL <Code>/docs/api</Code> is that window’s too,
+        and its href stays <Code>/docs</Code>.
       </p>
 
       <p>
@@ -41,9 +41,8 @@ export default function Page() {
 
       <p>
         <Code>/</Code> consumes no segments, so if it owned what is beneath it,
-        every URL on the site would be the home window&rsquo;s and a URL
-        belonging to no route — a 404 — would stop being one. It matches only
-        itself.
+        every URL on the site would be the home window’s and a URL belonging to
+        no route — a 404 — would stop being one. It matches only itself.
       </p>
 
       <H2>Specificity</H2>
@@ -95,7 +94,7 @@ export default function Page() {
         Leaving <Code>/documents/:file</Code> out of the routes array is not a
         missing feature — it is the other reasonable behavior. Without it,{" "}
         <Code>/documents</Code> claims its subroutes, and a document opens{" "}
-        <em>inside</em> the list&rsquo;s window rather than beside it.
+        <em>inside</em> the list’s window rather than beside it.
       </p>
 
       <ul>

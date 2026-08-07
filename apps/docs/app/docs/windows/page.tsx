@@ -170,7 +170,7 @@ const rect = windowRect({
 
       <p>
         Closing a window unmounts its subtree, and everything in it goes: scroll
-        position, form fields, a video&rsquo;s playback position.{" "}
+        position, form fields, a video’s playback position.{" "}
         <Code>keepMounted</Code> keeps it in the tree and hides it instead.
       </p>
 
@@ -212,8 +212,8 @@ const rect = windowRect({
       <p>
         Clicking anywhere in a window brings it to the front, and so does
         focusing anything inside it — including via <kbd>Tab</kbd>. The stacking
-        order is the desktop&rsquo;s <Code>openWindows</Code> list, and the{" "}
-        <Code>z-index</Code> comes from a window&rsquo;s position in it.
+        order is the desktop’s <Code>openWindows</Code> list, and the{" "}
+        <Code>z-index</Code> comes from a window’s position in it.
       </p>
 
       <p>
@@ -226,9 +226,9 @@ const rect = windowRect({
 
       <Callout title="Give every window a WindowName">
         <p>
-          The dialog&rsquo;s accessible name comes from it. A window without one
-          is announced as an unnamed dialog, which in a desktop full of them is
-          no name at all.
+          The dialog’s accessible name comes from it. A window without one is
+          announced as an unnamed dialog, which in a desktop full of them is no
+          name at all.
         </p>
       </Callout>
     </DocPage>

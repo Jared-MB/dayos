@@ -31,10 +31,10 @@ export default function Page() {
 
       <Callout>
         <p>
-          This is DayOS&rsquo;s own syntax and has nothing to do with
-          Next&rsquo;s folder names. Next still wants{" "}
-          <Code>app/documents/[file]/page.tsx</Code> on disk; the colon form is
-          how the desktop is told that this route means many windows.
+          This is DayOS’s own syntax and has nothing to do with Next’s folder
+          names. Next still wants <Code>app/documents/[file]/page.tsx</Code> on
+          disk; the colon form is how the desktop is told that this route means
+          many windows.
         </p>
       </Callout>
 
@@ -58,9 +58,9 @@ function DocumentApps() {
 }`}</CodeBlock>
 
       <p>
-        The list comes from the desktop&rsquo;s open windows, not from state of
-        your own. The desktop already knows which documents are open, and a
-        second copy of that would be one more thing to keep in sync.
+        The list comes from the desktop’s open windows, not from state of your
+        own. The desktop already knows which documents are open, and a second
+        copy of that would be one more thing to keep in sync.
       </p>
 
       <H3>Why params come along</H3>
@@ -69,8 +69,8 @@ function DocumentApps() {
         The matching already worked out what <Code>:file</Code> stood for.
         Without handing it back, every caller would take the href apart again to
         recover what the pattern had just told it. They arrive decoded, the way
-        a Next page&rsquo;s params do, so a window gets the name of the thing
-        rather than its URL spelling.
+        a Next page’s params do, so a window gets the name of the thing rather
+        than its URL spelling.
       </p>
 
       <CodeBlock>{`function DocumentApps() {
@@ -116,9 +116,9 @@ function DocumentApps() {
       <H2>Opening one</H2>
 
       <p>
-        Nothing special. The window&rsquo;s href is the URL, so a{" "}
-        <Code>Link</Code> opens it, and nothing in your code keeps a list of
-        which documents have been visited:
+        Nothing special. The window’s href is the URL, so a <Code>Link</Code>{" "}
+        opens it, and nothing in your code keeps a list of which documents have
+        been visited:
       </p>
 
       <CodeBlock filename="app/documents/page.tsx">{`export default function DocumentsPage() {

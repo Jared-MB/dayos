@@ -107,9 +107,9 @@ background-repeat: no-repeat;`}</CodeBlock>
       <H3>The id</H3>
 
       <p>
-        The <Code>id</Code> is the window&rsquo;s identity. It is the key in the
-        desktop&rsquo;s list of open windows, and with <Code>@dayos/next</Code>{" "}
-        it is also the window&rsquo;s href — one identity, declared once.
+        The <Code>id</Code> is the window’s identity. It is the key in the
+        desktop’s list of open windows, and with <Code>@dayos/next</Code> it is
+        also the window’s href — one identity, declared once.
       </p>
 
       <p>
@@ -130,8 +130,8 @@ background-repeat: no-repeat;`}</CodeBlock>
       <H3>Opening and closing from the app</H3>
 
       <p>
-        <Code>useDesktopApp</Code> gives you the containing app&rsquo;s state
-        and controls, which is how you build a button that opens a window from
+        <Code>useDesktopApp</Code> gives you the containing app’s state and
+        controls, which is how you build a button that opens a window from
         inside another one:
       </p>
 
@@ -155,8 +155,8 @@ background-repeat: no-repeat;`}</CodeBlock>
       <H2>Icons</H2>
 
       <p>
-        <Code>DesktopIcon</Code> is a button that opens its app&rsquo;s window
-        on double click. It handles <kbd>Enter</kbd> and <kbd>Space</kbd> too,
+        <Code>DesktopIcon</Code> is a button that opens its app’s window on
+        double click. It handles <kbd>Enter</kbd> and <kbd>Space</kbd> too,
         because a double click does not exist for the keyboard and the icon
         would otherwise be unreachable.
       </p>

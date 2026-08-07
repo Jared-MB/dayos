@@ -78,16 +78,16 @@ top: calc(50% - 230px);`}</CodeBlock>
       <CodeBlock>{`<Desktop defaultOpenWindows={["notes"]}>`}</CodeBlock>
 
       <p>
-        <Code>DesktopApp</Code>&rsquo;s <Code>defaultOpen</Code> does not count.
-        It runs in an effect, so it opens the window on the client only — an app
-        can seed itself but not the desktop&rsquo;s initial state, which belongs
-        to its parent.
+        <Code>DesktopApp</Code>’s <Code>defaultOpen</Code> does not count. It
+        runs in an effect, so it opens the window on the client only — an app
+        can seed itself but not the desktop’s initial state, which belongs to
+        its parent.
       </p>
 
       <H2>With the Next adapter</H2>
 
       <p>
-        This is the adapter&rsquo;s entire reason for existing.{" "}
+        This is the adapter’s entire reason for existing.{" "}
         <Code>WindowRouteProvider</Code> works out which window the requested
         URL belongs to during the same render, so the matching window is born
         open:
@@ -100,10 +100,10 @@ top: calc(50% - 230px);`}</CodeBlock>
 
       <p>
         The result is that requesting <Code>/about</Code> returns HTML with the
-        About window open and the About page&rsquo;s content inside it. While
-        this lived in an effect, the HTML always came out with an empty desktop
-        and the page&rsquo;s content was thrown away — there was no window
-        around to claim it.
+        About window open and the About page’s content inside it. While this
+        lived in an effect, the HTML always came out with an empty desktop and
+        the page’s content was thrown away — there was no window around to claim
+        it.
       </p>
 
       <H2>Server components inside windows</H2>
@@ -157,7 +157,7 @@ top: calc(50% - 230px);`}</CodeBlock>
 
       <Callout type="warning" title="Frozen means frozen">
         <p>
-          A background window&rsquo;s content stops updating until it is focused
+          A background window’s content stops updating until it is focused
           again. That is what makes windows feel like windows, and it is worth
           knowing when a data-driven view looks stale — it is showing you the
           moment it lost focus.

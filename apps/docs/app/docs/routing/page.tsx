@@ -39,7 +39,7 @@ export default function Page() {
         </li>
         <li>
           A window that loses focus keeps its own content instead of switching
-          to the current route&rsquo;s.
+          to the current route’s.
         </li>
       </ul>
 
@@ -52,7 +52,7 @@ export default function Page() {
 
         <Step title="Hand the layout's children to the provider">
           <p>
-            The current route&rsquo;s content goes in as a prop rather than as a
+            The current route’s content goes in as a prop rather than as a
             child. That is the whole trick: the window it belongs to claims it
             from the inside, instead of it sitting loose on the desktop.
           </p>
@@ -103,9 +103,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <Step title="Make each window's id its href">
           <p>
-            A window&rsquo;s href <em>is</em> its <Code>DesktopApp</Code> id —
-            one identity, declared once, rather than the same string written in
-            two places and kept in sync by hand.
+            A window’s href <em>is</em> its <Code>DesktopApp</Code> id — one
+            identity, declared once, rather than the same string written in two
+            places and kept in sync by hand.
           </p>
 
           <CodeBlock filename="app/shell.tsx">{`function App({ href }: { href: string }) {
@@ -179,7 +179,7 @@ function AppShell({ href }: { href: string }) {
       </p>
 
       <p>
-        Each window&rsquo;s last real URL is remembered, query string and hash
+        Each window’s last real URL is remembered, query string and hash
         included. Coming back to a window returns you to the URL it had, not to
         its bare href.
       </p>
@@ -221,7 +221,7 @@ function AppShell({ href }: { href: string }) {
 
       <p>
         There is no imperative API for this and there does not need to be one. A
-        window&rsquo;s href is a URL, so an ordinary <Code>Link</Code> opens it:
+        window’s href is a URL, so an ordinary <Code>Link</Code> opens it:
       </p>
 
       <CodeBlock>{`import Link from "next/link";

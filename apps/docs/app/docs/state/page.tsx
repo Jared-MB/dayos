@@ -114,17 +114,17 @@ function Workspace() {
 
       <p>
         <Code>onOpenChange</Code> fires wherever the change came from — the
-        icon, the close button, <kbd>Escape</kbd>, a route, another
-        window&rsquo;s button. It watches the state rather than wrapping any one
-        control, so there is no path that skips it.
+        icon, the close button, <kbd>Escape</kbd>, a route, another window’s
+        button. It watches the state rather than wrapping any one control, so
+        there is no path that skips it.
       </p>
 
       <Callout title="defaultOpen only seeds the client">
         <p>
           It runs in an effect, so a window opened this way does not exist in
           the server HTML. To have a window come open from the server, list it
-          in the desktop&rsquo;s <Code>defaultOpenWindows</Code> instead — that
-          is state the parent owns, and it is decided during render.
+          in the desktop’s <Code>defaultOpenWindows</Code> instead — that is
+          state the parent owns, and it is decided during render.
         </p>
       </Callout>
 
