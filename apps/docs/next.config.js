@@ -49,9 +49,16 @@ const nextConfig = {
 const withMDX = createMDX({
   options: {
     // A path and not the function itself: Turbopack runs the MDX loader in a
-    // worker, so everything it is handed has to survive being serialized. The
-    // path is absolute because the loader resolves it from inside its own
-    // package, where a relative one would mean somewhere else entirely.
+    // worker, so everything it is handed has to survive being serialized. A
+    // published plugin can be named, since the loader resolves it against this
+    // project; a local one is given as an absolute path, because a relative
+    // one would be resolved from inside `@next/mdx` instead.
+    //
+    // The front matter at the top of every page is the page's title and
+    // description. This keeps it out of the rendered prose, where the three
+    // dashes would otherwise come through as a rule; `docs.ts` is what reads
+    // the values back out.
+    remarkPlugins: ["remark-frontmatter"],
     rehypePlugins: [
       [fileURLToPath(new URL("mdx/rehype-code-meta.mjs", import.meta.url)), {}],
     ],
