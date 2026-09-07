@@ -64,6 +64,13 @@ export const OUTLINE: readonly OutlineSection[] = [
     title: { en: "API Reference", es: "Referencia de la API" },
     hrefs: ["/docs/api/core", "/docs/api/next"],
   },
+  {
+    title: {
+      en: "More",
+      es: "Más",
+    },
+    hrefs: ["/docs/examples"],
+  },
 ];
 
 /** Every href in reading order, which is also the order the footer walks. */
