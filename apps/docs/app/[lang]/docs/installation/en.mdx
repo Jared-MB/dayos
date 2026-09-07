@@ -98,36 +98,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   passed in as children — the desktop never renders them, it only positions them.
 </Callout>
 
-## Structural CSS
-
-DayOS gives a window a size only if you give the desktop one. The desktop is
-`position: relative` and nothing else, so with no height it collapses and every
-window inside it is clipped away.
-
-```css
-.desktop {
-  height: 100dvh;
-  background: linear-gradient(140deg, #1e3a5f, #0f172a 60%, #312e81);
-}
-```
-
-One more rule is worth adding up front if your windows can ever contain an
-iframe:
-
-```css
-/*
- * While a window is being dragged, an iframe under the cursor would swallow the
- * mouseup the drag listens for, and the window would stay stuck to the pointer.
- */
-.desktop[data-interacting] iframe {
-  pointer-events: none;
-}
-```
-
-`data-interacting` is set on the desktop whenever a window is being dragged or
-resized. DayOS cannot write that rule itself: it is a rule about descendants,
-and an inline style cannot express one.
-
 ## Next steps
 
 <Cards>
@@ -136,5 +106,8 @@ and an inline style cannot express one.
   </Card>
   <Card href="/docs/styling" title="Styling">
     What DayOS sets, and how to style everything else.
+  </Card>
+  <Card href="/docs/troubleshooting" title="Troubleshooting">
+    The two CSS rules worth adding before you need them.
   </Card>
 </Cards>
