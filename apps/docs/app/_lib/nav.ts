@@ -69,7 +69,7 @@ export const OUTLINE: readonly OutlineSection[] = [
       en: "More",
       es: "Más",
     },
-    hrefs: ["/docs/examples"],
+    hrefs: ["/docs/examples", "/docs/troubleshooting"],
   },
 ];
 

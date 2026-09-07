@@ -1,0 +1,54 @@
+---
+title: Troubleshooting
+keywords: iframe, drag, stuck window, collapsed desktop, structural css,
+  pointer-events
+---
+
+## The desktop collapses and every window is clipped away
+
+DayOS gives a window a size only if you give the desktop one. The desktop is
+`position: relative` and nothing else, so with no height it collapses and every
+window inside it is clipped away.
+
+```css
+.desktop {
+  height: 100dvh;
+  background: linear-gradient(140deg, #1e3a5f, #0f172a 60%, #312e81);
+}
+```
+
+## A window stalls or sticks to the pointer over an iframe
+
+While a window is being dragged, an iframe under the cursor swallows the
+`mousemove` and `mouseup` the drag listens for on the document — so the window
+stops following the pointer, or stays stuck to it after the mouse is released.
+
+The desktop carries `data-interacting` whenever a window is being dragged or
+resized, which is the window in which iframes have to be neutralised:
+
+```css
+.desktop[data-interacting] iframe {
+  pointer-events: none;
+}
+```
+
+Or in Tailwind, on the desktop itself:
+
+```tsx
+<Desktop className="[&[data-interacting]_iframe]:pointer-events-none" />
+```
+
+It is worth adding up front if your windows can ever contain an iframe: an
+embedded map, a video, a preview of another page. Nothing goes wrong until the
+first drag crosses one.
+
+## Elsewhere
+
+<Cards>
+  <Card href="/docs/desktop-and-apps" title="Desktop and apps">
+    What the desktop sets, including `data-interacting`.
+  </Card>
+  <Card href="/docs/styling" title="Styling">
+    Every state attribute you can style against.
+  </Card>
+</Cards>
