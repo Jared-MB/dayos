@@ -1,0 +1,146 @@
+Un escritorio que se renderiza vacío en el servidor y se rellena al hidratar te
+da un parpadeo de nada, contenido que los buscadores no ven, y una ventana que
+salta a su sitio cuando llega React. DayOS evita las tres cosas, y merece la
+pena entender cómo antes de ponerte a depurarlo.
+
+## Los dos marcos
+
+Una ventana se renderiza de una de dos formas según si hay un nodo de escritorio
+al que entrar por portal.
+
+### Con escritorio: el marco interactivo
+
+Una vez montada, la ventana entra por portal en el elemento del escritorio y se
+puede arrastrar y redimensionar. Este es el caso normal, y es lo que ves en el
+navegador.
+
+### Sin él: el marco estático
+
+En el servidor — y en el render de hidratación, donde el nodo del escritorio es
+igual de desconocido — la ventana se renderiza en su sitio, con el mismo marcado
+accesible y sin arrastre. Lleva `data-window` para que puedas distinguirlos en
+el DOM.
+
+Su geometría se expresa en CSS en lugar de en píxeles calculados, porque el
+servidor no conoce el viewport. Los valores están elegidos para caer exactamente
+donde el marco interactivo va a poner la ventana al montarse: centrada, al 70%
+del escritorio.
+
+```css
+/* No defaultSize: a percentage that matches the 70% the mounted window uses. */
+width: 70%;
+height: 70%;
+left: 15%;
+top: 15%;
+
+/* With a defaultSize: pixels, centred the way calc can express it. */
+width: 520px;
+height: 460px;
+left: calc(50% - 260px);
+top: calc(50% - 230px);
+```
+
+<Callout title="Por qué esto importa">
+  Si los dos marcos no coincidieran, el cambio al hidratar se leería como un
+  salto. No es hipotético: es lo que pasaba cuando el marco estático salía en la
+  esquina. Las cuentas son compartidas y hay un test que los compara, así que un
+  cambio en uno tiene que ser un cambio en los dos.
+</Callout>
+
+## Qué ventanas están abiertas en el servidor
+
+Solo aquello que se le dice al escritorio durante el render. Con el núcleo a
+secas eso significa `defaultOpenWindows`:
+
+```tsx
+<Desktop defaultOpenWindows={["notes"]}>
+```
+
+El `defaultOpen` de `DesktopApp` no cuenta. Se ejecuta en un efecto, así que
+abre la ventana solo en el cliente — una app puede inicializarse a sí misma pero
+no el estado inicial del escritorio, que le pertenece a su padre.
+
+## Con el adaptador de Next
+
+Esta es toda la razón de ser del adaptador. `WindowRouteProvider` averigua a qué
+ventana pertenece la URL pedida durante ese mismo render, así que la ventana que
+coincide nace abierta:
+
+```tsx
+const [openWindows, setOpenWindows] = useState<string[]>(() => {
+  const match = findRoute(routes, pathname);
+  return match ? [match] : [];
+});
+```
+
+El resultado es que pedir `/about` devuelve HTML con la ventana About abierta y
+el contenido de la página About dentro. Mientras esto vivió en un efecto, el
+HTML salía siempre con un escritorio vacío y el contenido de la página se tiraba
+a la basura — no había ninguna ventana ahí para reclamarlo.
+
+## Componentes de servidor dentro de ventanas
+
+El escritorio es un componente de cliente; lo que va dentro de una ventana no
+tiene por qué serlo. En una app de Next las páginas siguen siendo componentes de
+servidor, y el layout le pasa al proveedor su salida renderizada como una prop:
+
+```tsx title="app/layout.tsx"
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="es">
+      <body>
+        {/*
+          The current route's content goes in as a prop rather than as a child:
+          the window it belongs to claims it from the inside instead of it
+          sitting loose on the desktop.
+        */}
+        <Shell>{children}</Shell>
+      </body>
+    </html>
+  );
+}
+```
+
+La ventana nunca renderiza la página. Posiciona un nodo que ya se renderizó en
+otro sitio, que es por lo que un componente de servidor puede vivir dentro de
+una ventana arrastrable sin convertirse en un componente de cliente.
+
+## Contenido congelado
+
+Cuando el foco se va a otra ventana, la que queda detrás sigue mostrando lo que
+tenía en lugar de seguir a la URL. Quedarse con el nodo de React no basta por sí
+solo: lo que entrega el router es un puntero al segmento activo, así que volver
+a renderizarlo pintaría la ruta actual y todas las ventanas mostrarían lo mismo.
+
+Junto al nodo, `useWindowRoute` guarda el contexto de router que había cuando
+esa ruta estaba activa, y lo vuelve a proveer. El nodo entonces se resuelve de
+vuelta a su propio segmento.
+
+<Callout type="warning" title="Congelado significa congelado">
+  El contenido de una ventana en segundo plano deja de actualizarse hasta que se
+  vuelve a enfocar. Eso es lo que hace que las ventanas se sientan como ventanas,
+  y conviene saberlo cuando una vista basada en datos parece caducada — te está
+  enseñando el momento en que perdió el foco.
+</Callout>
+
+## Depuración
+
+- **La ventana entra con un parpadeo desde la esquina.** La geometría estática y
+  la interactiva han divergido. Busca un `style` que solo se aplique a una de
+  las dos.
+- **El escritorio sale vacío en «ver código fuente».** No había ninguna ventana
+  abierta durante el render. Con el núcleo, eso significa `defaultOpenWindows`;
+  con el adaptador, que la URL no coincidió con ninguna ruta declarada.
+- **Todas las ventanas muestran el mismo contenido.** La ventana está
+  renderizando la ruta directamente en lugar de lo que devolvió
+  `useWindowRoute`.
+
+<Cards>
+  <Card href="/es/docs/routing" title="Ventanas con URL">
+    Monta el adaptador y consigue ventanas renderizadas en servidor.
+  </Card>
+</Cards>

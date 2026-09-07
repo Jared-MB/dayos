@@ -1,0 +1,189 @@
+Dos componentes sostienen el escritorio. `Desktop` es el contenedor y la única
+fuente de verdad sobre qué ventanas están abiertas; `DesktopApp` es una entrada
+dentro de él, que une un icono con una ventana a través de un id compartido.
+
+## Desktop
+
+Todo lo demás tiene que estar dentro. Gestiona la lista de ventanas abiertas, su
+orden de apilado, y si en ese momento hay un arrastre o un redimensionado en
+curso.
+
+```tsx
+<Desktop className="desktop">
+  {/* las apps van aquí */}
+</Desktop>
+```
+
+Renderiza un único `div` con dos estilos en línea:
+
+```css
+position: relative;  /* las ventanas se posicionan contra él */
+overflow: hidden;    /* y él las recorta */
+```
+
+Eso es todo. La altura, el fondo, la rejilla de iconos — todo tuyo. Dale una
+altura, o se colapsa y las ventanas de dentro quedan recortadas a nada.
+
+### El atajo de wallpaper
+
+`wallpaper` recibe una URL y equivale exactamente a escribir tú mismo las cuatro
+propiedades de fondo:
+
+```tsx
+<Desktop className="desktop" wallpaper="/wallpaper.jpg" />
+```
+
+```css
+background-image: url(/wallpaper.jpg);
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;
+```
+
+Para un degradado o cualquier otra cosa, salta la prop y usa CSS. Es una
+comodidad para el caso común, no la forma oficial de poner fondos.
+
+### Estado de interacción
+
+Mientras se arrastra o se redimensiona una ventana, el escritorio lleva
+`data-interacting`. Existe por un problema muy concreto: un iframe bajo el
+cursor se traga los `mousemove` y `mouseup` que el arrastre escucha en el
+documento, y la ventana o se atasca o se queda pegada al puntero.
+
+```css
+.desktop[data-interacting] iframe {
+  pointer-events: none;
+}
+```
+
+DayOS no puede ponerlo por su cuenta: es una regla sobre descendientes, y un
+estilo en línea no puede expresar una. En Tailwind:
+
+```tsx
+<Desktop className="[&[data-interacting]_iframe]:pointer-events-none" />
+```
+
+## DesktopApp
+
+Una app es un icono y una ventana que van juntos. No renderiza ningún elemento
+propio — es un proveedor de contexto, y sus hijos son lo que se ve.
+
+```tsx
+<DesktopApp id="notes">
+  <DesktopIcon>Notas</DesktopIcon>
+  <Window>
+    <WindowContent>Hola</WindowContent>
+  </Window>
+</DesktopApp>
+```
+
+Ninguno de los dos hijos es obligatorio. Una app con icono y sin ventana es un
+lanzador de otra cosa; una app con ventana y sin icono es una ventana que se
+abre desde algún sitio que no es el escritorio, que es cómo funcionan las rutas
+dinámicas.
+
+### El id
+
+El `id` es la identidad de la ventana. Es la clave en la lista de ventanas
+abiertas del escritorio, y con `@dayos/next` es además el href de la ventana —
+una identidad, declarada una vez.
+
+Omitirlo está permitido y te da uno generado, lo cual está bien para una app a
+la que nunca se hace referencia desde fuera. Cualquier cosa que abra, cierre o
+enrute una ventana por su nombre necesita un id elegido por ti.
+
+<Callout type="warning" title="Dos apps no pueden compartir un id">
+  Compartirían el estado de la ventana, se abrirían las dos a la vez, las dos
+  entrarían por portal en el escritorio, y acabarían exactamente en el mismo
+  sitio — una ventana con el contenido equivocado dentro. DayOS registra un
+  error en desarrollo cuando ve esto. En producción la comprobación se salta por
+  completo.
+</Callout>
+
+### Abrir y cerrar desde la app
+
+`useDesktopApp` te da el estado y los controles de la app que te contiene, que
+es cómo se construye un botón que abre una ventana desde dentro de otra:
+
+```tsx
+function Controls() {
+  const { id, isWindowOpen, open, close, focus } = useDesktopApp();
+
+  return (
+    <button onClick={isWindowOpen ? close : open} type="button">
+      {isWindowOpen ? "Cerrar" : "Abrir"} {id}
+    </button>
+  );
+}
+```
+
+Lanza un error fuera de un `DesktopApp`. Cuando eso es una posibilidad real — un
+componente compartido entre contextos con ventana y sin ella —
+`useOptionalDesktopApp` devuelve `null` en su lugar.
+
+## Iconos
+
+`DesktopIcon` es un botón que abre la ventana de su app con doble clic. También
+responde a <kbd>Enter</kbd> y <kbd>Espacio</kbd>, porque el doble clic no existe
+para el teclado y el icono quedaría si no fuera de alcance.
+
+```tsx
+<DesktopIcon className="icon">
+  <img alt="" src="/icons/notes.svg" />
+  <DesktopIconText>Notas</DesktopIconText>
+</DesktopIcon>
+```
+
+`DesktopIconText` es un `span` normal y existe para que la etiqueta sea algo a
+lo que dar estilo en lugar de un nodo de texto suelto.
+
+### Tus manejadores van primero
+
+DayOS compone con los manejadores que le pasas en lugar de reemplazarlos. El
+tuyo se ejecuta primero, y llamar a `preventDefault()` cancela la apertura:
+
+```tsx
+<DesktopIcon
+  onDoubleClick={(event) => {
+    if (!isUnlocked) event.preventDefault();
+  }}
+>
+  Caja fuerte
+</DesktopIcon>
+```
+
+## Leer el escritorio
+
+`useDesktop` es el estado completo, disponible para cualquier cosa dentro de
+`Desktop`. Es con lo que se construye una barra de tareas o un selector de
+ventanas:
+
+```tsx
+function Taskbar() {
+  const { openWindows, activeWindowId, focusWindow, closeWindow } = useDesktop();
+
+  return (
+    <div className="taskbar">
+      {openWindows.map((id) => (
+        <button
+          data-active={id === activeWindowId ? "" : undefined}
+          key={id}
+          onClick={() => focusWindow(id)}
+          type="button"
+        >
+          {id}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+`openWindows` va en orden de apilado, así que la última entrada es la ventana
+que está delante — que es exactamente lo que es `activeWindowId`.
+
+<Callout>
+  Una barra de tareas tiene que estar dentro de `Desktop` para leer este estado,
+  y quedará posicionada contra el escritorio como todo lo demás. Dale un
+  `z-index` por encima de las ventanas: empiezan en 1 y suben con la pila.
+</Callout>

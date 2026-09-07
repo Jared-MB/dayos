@@ -1,0 +1,217 @@
+`@dayos/next` le da una URL a cada ventana. Es la única pieza de DayOS que habla
+con Next, y es opcional de verdad: un escritorio sin ella funciona igual, en una
+sola página.
+
+## Qué te aporta
+
+- Pedir `/about` devuelve HTML que **ya trae** la ventana About abierta con su
+  contenido dentro. Sin parpadeo de escritorio vacío, e indexable.
+- Enfocar una ventana actualiza la URL, así que una ventana se puede compartir
+  por enlace. Usa `replace`, así que el botón de atrás recorre páginas y no
+  cambios de foco.
+- Una ventana que pierde el foco conserva su propio contenido en lugar de
+  cambiar al de la ruta actual.
+
+## Puesta en marcha
+
+<Steps>
+
+<Step title="Instala">
+
+```bash
+pnpm add @dayos/core @dayos/next
+```
+
+</Step>
+
+<Step title="Pásale al proveedor los children del layout">
+
+El contenido de la ruta actual entra como una prop en lugar de como un hijo. Ese
+es todo el truco: la ventana a la que pertenece lo reclama desde dentro, en vez
+de quedarse suelto sobre el escritorio.
+
+```tsx title="app/layout.tsx"
+import { Shell } from "./shell";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="es">
+      <body>
+        <Shell>{children}</Shell>
+      </body>
+    </html>
+  );
+}
+```
+
+</Step>
+
+<Step title="Declara todas las rutas por adelantado">
+
+El proveedor necesita la lista completa durante el render — así es como el
+servidor sabe a qué ventana pertenece la URL pedida. Una ventana que se
+registrara desde un efecto llegaría siempre tarde.
+
+```tsx title="app/shell.tsx"
+"use client";
+
+import { DesktopApp, DesktopIcon, Window, WindowContent } from "@dayos/core";
+import { RoutedDesktop, useWindowRoute, WindowRouteProvider } from "@dayos/next";
+
+const ROUTES = ["/", "/about"] as const;
+
+export function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <WindowRouteProvider content={children} routes={ROUTES}>
+      <RoutedDesktop className="desktop">
+        {ROUTES.map((href) => (
+          <App href={href} key={href} />
+        ))}
+      </RoutedDesktop>
+    </WindowRouteProvider>
+  );
+}
+```
+
+</Step>
+
+<Step title="Haz que el id de cada ventana sea su href">
+
+El href de una ventana _es_ su id de `DesktopApp` — una identidad, declarada una
+vez, en lugar de la misma cadena escrita en dos sitios y mantenida en sincronía
+a mano.
+
+```tsx title="app/shell.tsx"
+function App({ href }: { href: string }) {
+  return (
+    <DesktopApp id={href}>
+      <AppShell href={href} />
+    </DesktopApp>
+  );
+}
+
+function AppShell({ href }: { href: string }) {
+  // This window's content: live while it is the current route, frozen once
+  // focus moves elsewhere.
+  const content = useWindowRoute();
+
+  return (
+    <>
+      <DesktopIcon>{href}</DesktopIcon>
+      <Window keepMounted>
+        <WindowContent>{content}</WindowContent>
+      </Window>
+    </>
+  );
+}
+```
+
+<Callout>
+  `useWindowRoute` hay que llamarlo dentro del `DesktopApp`, no en el componente
+  que lo renderiza — ahí es donde vive el id que lee. De ahí el reparto entre
+  `App` y `AppShell` de arriba.
+</Callout>
+
+</Step>
+
+<Step title="Añade las páginas">
+
+Páginas de Next normales y corrientes. Siguen siendo componentes de servidor, y
+nada en ellas sabe que se está renderizando dentro de una ventana.
+
+```tsx title="app/about/page.tsx"
+export default function AboutPage() {
+  return (
+    <article>
+      <h1>Acerca de</h1>
+      <p>Esta ventana es una ruta de verdad.</p>
+    </article>
+  );
+}
+```
+
+</Step>
+
+</Steps>
+
+## Cómo funciona la sincronía
+
+### De la URL a la ventana
+
+Aterrizar en una ruta abre su ventana. Navegar a una URL que pertenece a otra
+ventana abre esa — y deliberadamente no cierra la primera, ya que enfocar una
+ventana cambia la URL y no tiene por qué cerrar nada.
+
+### De la ventana a la URL
+
+La ventana de delante es la URL. `RoutedDesktop` se ocupa de esta sincronía él
+solo, y usa `replace` con `scroll: false`: un cambio de foco no es una
+navegación, así que no debería llenar el historial ni mover el viewport.
+
+De cada ventana se recuerda su última URL real, query string y hash incluidos.
+Volver a una ventana te devuelve a la URL que tenía, no a su href pelado.
+
+### Cuando se cierra la última ventana
+
+La URL se va a `exitHref`, que por defecto es `"/"`:
+
+```tsx
+<RoutedDesktop exitHref="/welcome" />
+```
+
+## Ventanas sin ruta
+
+No todas las apps tienen que estar enrutadas. Un `DesktopApp` con un id que no
+reclama ninguna ruta — o sin id siquiera — es una ventana normal: se abre, se
+enfoca, y deja la URL en paz.
+
+```tsx
+<RoutedDesktop className="desktop">
+  {ROUTES.map((href) => (
+    <App href={href} key={href} />
+  ))}
+
+  {/* Not a route. Opening it does not change the URL. */}
+  <DesktopApp id="calculator">
+    <DesktopIcon>Calculadora</DesktopIcon>
+    <Window>
+      <WindowContent>
+        <Calculator />
+      </WindowContent>
+    </Window>
+  </DesktopApp>
+</RoutedDesktop>
+```
+
+## Abrir una ventana desde un enlace
+
+No hay una API imperativa para esto y no hace falta que la haya. El href de una
+ventana es una URL, así que un `Link` normal la abre:
+
+```tsx
+import Link from "next/link";
+
+<Link href="/about">Acerca de</Link>
+```
+
+Que es además por lo que un icono suele ser un enlace — abre la ventana con
+doble clic, y le da la URL a quien quiera copiarla.
+
+```tsx
+<DesktopIcon render={<Link href={href} />}>
+  <DesktopIconText>{title}</DesktopIconText>
+</DesktopIcon>
+```
+
+<Cards>
+  <Card href="/es/docs/routing/dynamic-routes" title="Rutas dinámicas">
+    Una declaración, una ventana por documento.
+  </Card>
+  <Card href="/es/docs/routing/matching" title="Coincidencia de rutas">
+    A qué ventana pertenece una URL cuando varias podrían reclamarla.
+  </Card>
+</Cards>

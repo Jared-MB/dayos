@@ -4,8 +4,10 @@
  * more machinery than the thing it styles.
  *
  * Theming works in three layers. `:root` is light, the `prefers-color-scheme`
- * block is the system default, and `[data-theme]` — written by the toggle —
- * wins over both in either direction, which is why dark is declared twice.
+ * block is the system default, and `[data-theme]` — written by `next-themes`
+ * before the first paint — wins over both in either direction, which is why
+ * dark is declared twice. The media query is what is left when that script
+ * never runs: the no-JavaScript fallback.
  */
 
 :root {
@@ -262,6 +264,48 @@ a {
   background: none;
   color: var(--fg-muted);
   cursor: pointer;
+}
+
+/* The languages, as a segmented pair. Sized like the icon buttons beside it so
+   the row keeps one height, and bordered as one control so the two links read
+   as a choice between them rather than as two more links in the nav. */
+.language-switcher {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.language-option {
+  display: grid;
+  place-items: center;
+  /* Under the 24px minimum on its own, so the padding does the reaching: the
+     label is two characters and a wider box would push the nav around. */
+  min-width: 28px;
+  height: 100%;
+  padding: 0 0.375rem;
+  border-radius: 4px;
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.language-option:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+
+/* The current language is marked by more than colour: it is the one carrying a
+   filled background, which survives both a colour-blind reader and a screenshot
+   in greyscale. `aria-current` says the same thing to anyone listening. */
+.language-option[data-active] {
+  background: var(--bg-hover);
+  color: var(--fg);
 }
 
 .icon-button:hover {
@@ -525,6 +569,7 @@ a {
 
 .doc-page {
   max-width: var(--content-width);
+  margin: 0 auto;
 }
 
 /* ---- Table of contents --------------------------------------------------- */

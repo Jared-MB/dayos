@@ -1,5 +1,5 @@
-import { Sidebar } from "../_components/sidebar";
-import { TableOfContents } from "../_components/toc";
+import { Sidebar } from "../../_components/sidebar";
+import { TableOfContents } from "../../_components/toc";
 
 /**
  * Three columns: the docs' contents, the page, and the page's contents. The

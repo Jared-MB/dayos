@@ -1,0 +1,82 @@
+DayOS es un escritorio con ventanas para React completamente personalizable.
+
+```tsx title="desktop.tsx"
+import {
+  Desktop,
+  DesktopApp,
+  DesktopIcon,
+  Window,
+  WindowContent,
+  WindowHeader,
+  WindowName,
+} from "@dayos/core";
+
+<Desktop className="h-dvh">
+  <DesktopApp id="notes">
+    <DesktopIcon>Notes</DesktopIcon>
+    <Window>
+      <WindowHeader>
+        <WindowName>Notes</WindowName>
+      </WindowHeader>
+      <WindowContent>Hello</WindowContent>
+    </Window>
+  </DesktopApp>
+</Desktop>;
+```
+
+## Dos paquetes
+
+DayOS está dividido en dos paquetes principales, el core con toda la
+funcionalidad y un adaptador para usar rutas con Next.JS.
+
+<Cards>
+  <Card href="/es/docs/api/core" title="@dayos/core">
+    La librería. Solo React, sin depender de Next ni de ningún router.
+  </Card>
+  <Card href="/es/docs/api/next" title="@dayos/next">
+    El adaptador opcional para el App Router de Next: cada ventana obtiene una
+    URL propia.
+  </Card>
+</Cards>
+
+El core se sostiene por sí solo y no le falta nada. Sin el adaptador el
+escritorio funciona igual, en una sola página y sin URL. El adaptador es la
+única parte que habla con Next.
+
+## ¿Qué añade el adaptador?
+
+Al enfocar una ventana se actualiza la URL, lo que hace que las ventanas se
+puedan compartir por enlace. Al usar `replace`, el botón `atrás` sigue
+recorriendo páginas y no cambios de foco. Gracias a este paquete todas las URL
+pueden ser renderizadas desde el servidor.
+
+## ¿Qué no hace?
+
+DayOS es un gestor de ventanas, no un entorno de escritorio. No hay barra de
+tareas, ni dock, ni menú de inicio, ni bandeja de notificaciones, ni selector de
+fondo, ni acople de ventanas. Todo eso son cosas que puedes construir sobre las
+API's públicas.
+
+<Callout title="Sin estilos incluidos">
+  El único CSS que define DayOS es estructural: el escritorio es
+  `position: relative` con `overflow: hidden` porque las ventanas se posicionan y
+  se recortan contra él, y la ventana es una columna flex para que su cabecera y
+  su cuerpo se apilen. Todo lo demás como tamaño, fondo, bordes, la rejilla de
+  iconos son completamente personalizables. DayOS no impone ningún estilo.
+</Callout>
+
+## Requisitos
+
+- React 19 y React DOM 19.
+- Para `@dayos/next`: Next 16 con el App Router.
+
+## Siguientes pasos
+
+<Cards>
+  <Card href="/es/docs/installation" title="Instalación">
+    Añade los paquetes a una app de React o de Next.
+  </Card>
+  <Card href="/es/docs/quick-start" title="Inicio rápido">
+    Construye un escritorio con dos ventanas desde cero.
+  </Card>
+</Cards>

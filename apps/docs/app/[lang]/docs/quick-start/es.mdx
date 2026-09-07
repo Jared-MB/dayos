@@ -1,0 +1,262 @@
+Esto construye un escritorio con dos apps, de un componente vacío a algo que
+puedes arrastrar por la pantalla. Usa `@dayos/core` a secas — sin rutas, una
+sola página. Añadir URL viene después y no cambia nada de esto.
+
+<Steps>
+
+<Step title="Instala el núcleo">
+
+```bash
+pnpm add @dayos/core
+```
+
+</Step>
+
+<Step title="Crea el escritorio">
+
+`Desktop` es el contenedor. Gestiona qué ventanas están abiertas y en qué orden
+se apilan, y todos los demás componentes tienen que estar dentro de él.
+
+```tsx title="app/desktop.tsx"
+"use client";
+
+import { Desktop } from "@dayos/core";
+
+export function MyDesktop() {
+  return <Desktop className="desktop" />;
+}
+```
+
+No tiene tamaño propio, así que dáselo tú. Sin altura se colapsa a nada y
+recorta todas las ventanas que haya dentro.
+
+```css
+.desktop {
+  height: 100dvh;
+  background: linear-gradient(140deg, #1e3a5f, #0f172a 60%, #312e81);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 6rem);
+  align-content: start;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+```
+
+</Step>
+
+<Step title="Añade una app">
+
+Una `DesktopApp` es un icono más una ventana, unidos por un `id`. El icono abre
+la ventana; la ventana es lo que se abre.
+
+```tsx title="app/desktop.tsx"
+"use client";
+
+import {
+  Desktop,
+  DesktopApp,
+  DesktopIcon,
+  DesktopIconText,
+  Window,
+  WindowContent,
+  WindowHeader,
+  WindowName,
+} from "@dayos/core";
+
+export function MyDesktop() {
+  return (
+    <Desktop className="desktop">
+      <DesktopApp id="notes">
+        <DesktopIcon className="icon">
+          <span aria-hidden="true" className="icon-glyph">
+            ▣
+          </span>
+          <DesktopIconText>Notas</DesktopIconText>
+        </DesktopIcon>
+
+        <Window className="window">
+          <WindowHeader className="window-header">
+            <WindowName className="window-title">Notas</WindowName>
+          </WindowHeader>
+          <WindowContent className="window-content">
+            Haz doble clic en el icono para abrirme.
+          </WindowContent>
+        </Window>
+      </DesktopApp>
+    </Desktop>
+  );
+}
+```
+
+Hacer doble clic en el icono abre la ventana, y también lo hacen <kbd>Enter</kbd>
+y <kbd>Espacio</kbd> cuando tiene el foco. La ventana ya se puede arrastrar por
+su cabecera y redimensionar desde sus bordes.
+
+<Callout>
+  `WindowHeader` es el asa de arrastre. Una ventana sin ella se puede
+  redimensionar y cerrar igual, pero no se puede mover.
+</Callout>
+
+</Step>
+
+<Step title="Dale controles a la ventana">
+
+`WindowActions` es el grupo de controles; `WindowExpand` maximiza y restaura,
+`WindowClose` cierra. Los dos vienen con los nombres accesibles correctos, y
+`WindowExpand` anuncia cuál de sus dos funciones está haciendo en ese momento.
+
+```tsx title="app/desktop.tsx" added="4-7"
+<Window className="window">
+  <WindowHeader className="window-header">
+    <WindowName className="window-title">Notas</WindowName>
+    <WindowActions className="window-actions">
+      <WindowExpand className="window-button">▢</WindowExpand>
+      <WindowClose className="window-button">✕</WindowClose>
+    </WindowActions>
+  </WindowHeader>
+  <WindowContent className="window-content">
+    Haz doble clic en el icono para abrirme.
+  </WindowContent>
+</Window>
+```
+
+</Step>
+
+<Step title="Añade una segunda app">
+
+La segunda app tiene la misma forma con otro `id`. Que dos apps compartan id es
+un fallo del que DayOS avisa en desarrollo: compartirían el estado de la ventana
+y renderizarían la misma ventana dos veces, apiladas exactamente una encima de
+la otra.
+
+```tsx title="app/desktop.tsx"
+<Desktop className="desktop">
+  <App id="notes" title="Notas">
+    Haz doble clic en el icono para abrirme.
+  </App>
+  <App id="about" title="Acerca de">
+    Arrastra mi cabecera. Arrastra mis bordes. Prueba el botón de maximizar.
+  </App>
+</Desktop>
+```
+
+Donde `App` es el marcado del paso anterior, extraído a un componente tuyo:
+
+```tsx title="app/app.tsx"
+function App({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <DesktopApp id={id}>
+      <DesktopIcon className="icon">
+        <span aria-hidden="true" className="icon-glyph">
+          ▣
+        </span>
+        <DesktopIconText>{title}</DesktopIconText>
+      </DesktopIcon>
+
+      <Window className="window">
+        <WindowHeader className="window-header">
+          <WindowName className="window-title">{title}</WindowName>
+          <WindowActions className="window-actions">
+            <WindowExpand className="window-button">▢</WindowExpand>
+            <WindowClose className="window-button">✕</WindowClose>
+          </WindowActions>
+        </WindowHeader>
+        <WindowContent className="window-content">{children}</WindowContent>
+      </Window>
+    </DesktopApp>
+  );
+}
+```
+
+Abre las dos. La que pulses en último lugar pasa al frente, y cerrarla deja la
+otra donde estaba.
+
+</Step>
+
+<Step title="Dale estilo">
+
+Nada de lo anterior tiene todavía más aspecto que el que le da el navegador.
+Esta es la hoja de estilos que usa la app de ejemplo, y es un punto de partida
+más que un requisito:
+
+```css
+.icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: none;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  cursor: pointer;
+}
+
+.icon:hover,
+.icon:focus-visible {
+  background: rgb(255 255 255 / 0.15);
+  border-color: rgb(255 255 255 / 0.3);
+  outline: none;
+}
+
+.window {
+  border: 1px solid #d4d4d8;
+  border-radius: 0.75rem;
+  background: #f4f4f5;
+  box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.45);
+  overflow: hidden;
+}
+
+.window-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #d4d4d8;
+  background: #ffffff;
+  cursor: grab;
+}
+
+.window-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.window-content {
+  padding: 1rem 1.25rem;
+}
+```
+
+</Step>
+
+</Steps>
+
+## Por dónde seguir
+
+<Cards>
+  <Card href="/es/docs/windows" title="Ventanas">
+    Geometría, maximizado, y mantener una ventana montada mientras está cerrada.
+  </Card>
+  <Card href="/es/docs/routing" title="Ventanas con URL">
+    Dale a cada una de estas ventanas una ruta propia.
+  </Card>
+  <Card
+    href="https://github.com/Jared-MB/dayos/tree/main/apps/examples/nextjs"
+    title="La app de ejemplo"
+  >
+    Un escritorio funcionando con rutas estáticas, dinámicas y anidamiento.
+  </Card>
+</Cards>

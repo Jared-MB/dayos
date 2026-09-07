@@ -1,0 +1,169 @@
+Todo lo que exporta `@dayos/next`. Es la única pieza de DayOS que habla con
+Next, y necesita Next 16 con el App Router junto a `@dayos/core`.
+
+```tsx
+import {
+  RoutedDesktop,
+  WindowRouteProvider,
+  useDynamicWindows,
+  useWindowRoute,
+  type RouteParams,
+  type RoutedDesktopProps,
+} from "@dayos/next";
+```
+
+## WindowRouteProvider
+
+La pieza más externa. Recibe los children del layout y todas las rutas por
+adelantado, y siembra la ventana abierta a partir de la URL durante el render —
+que es lo que mete la ventana correcta en el HTML del servidor.
+
+<PropsTable>
+  <Prop name="content" type="React.ReactNode">
+    Los children del layout, es decir, lo que devuelva la página actual. Se pasa
+    como prop en lugar de renderizarse como hijo para que la ventana a la que
+    pertenece pueda reclamarlo.
+  </Prop>
+  <Prop name="routes" type="readonly string[]">
+    Todas las rutas del escritorio, declaradas por adelantado. Un segmento
+    escrito `:asi` es un param y coincide con cualquier cosa.
+
+    Tiene que ser la lista completa durante el render: una ventana que se
+    registrara desde un efecto llegaría tarde para que el servidor supiera a cuál
+    pertenecía la URL.
+  </Prop>
+  <Prop name="children" type="React.ReactNode">
+    El escritorio, y todo lo que hay en él.
+  </Prop>
+</PropsTable>
+
+```tsx title="app/shell.tsx"
+const ROUTES = ["/", "/about", "/documents", "/documents/:file"] as const;
+
+<WindowRouteProvider content={children} routes={ROUTES}>
+  <RoutedDesktop className="desktop">{/* apps */}</RoutedDesktop>
+</WindowRouteProvider>;
+```
+
+## RoutedDesktop
+
+`Desktop` con su estado de ventanas delegado al proveedor. Es además el único
+dueño de la sincronía inversa, de ventana de delante a URL — antes esa misma
+sincronía la corría cada ventana, así que N apps enrutadas significaban N
+llamadas a `replace` por cada cambio de foco.
+
+<PropsTable>
+  <Prop name="exitHref" type="string" default='"/"'>
+    A dónde va la URL cuando no queda ninguna ventana abierta.
+  </Prop>
+  <Prop name="...props" type="DesktopProps">
+    Todo lo que acepta Desktop salvo `openWindows`, `defaultOpenWindows` y
+    `onOpenWindowsChange` — esas le pertenecen al proveedor.
+  </Prop>
+</PropsTable>
+
+### Cómo sincroniza
+
+- Navega con `replace`, no con `push`: enfocar una ventana no es navegar, y
+  hacer push haría que el botón de atrás recorriera cada cambio de foco en lugar
+  de las páginas visitadas.
+- Pasa `scroll: false`, así que una ventana que pasa al frente no se desplaza de
+  vuelta a su parte superior. Nada de la página ha cambiado, así que nada
+  debería moverse.
+- Recuerda la última URL real de cada ventana, query y hash incluidos. Volver a
+  una ventana no borra los params que tenía.
+- Una ventana cuyo id no reclama ninguna ruta se deja en paz — una app sin ruta
+  no toca la URL.
+
+## useWindowRoute
+
+El contenido de la ruta de la app que te contiene. Vivo mientras esa ruta es la
+actual, congelado cuando el foco se va a otra parte.
+
+```tsx
+function AppShell() {
+  const content = useWindowRoute();
+
+  return (
+    <Window>
+      <WindowContent>{content}</WindowContent>
+    </Window>
+  );
+}
+```
+
+Devuelve `null` para una ventana que nunca ha sido la ruta actual. Lanza un
+error cuando el `DesktopApp` que la contiene no tiene un id explícito — el id es
+el href, y sin uno no hay ninguna ruta que devolver.
+
+<Callout>
+  Llámalo dentro del `DesktopApp`, no en el componente que renderiza uno. Ahí es
+  donde vive el id que lee, y por eso la forma habitual es un pequeño envoltorio
+  `App` alrededor de un `AppShell`.
+</Callout>
+
+### Por qué congelar cuesta más que quedarse con el nodo
+
+Lo que entrega el router no es contenido sino un puntero al segmento activo, así
+que volver a renderizar un nodo guardado pinta la ruta actual y todas las
+ventanas acaban mostrando lo mismo. Junto al nodo, el hook guarda el contexto de
+router que había cuando esta era la ruta activa y lo vuelve a proveer, lo que
+hace que el nodo se resuelva de vuelta a su propio segmento.
+
+## useDynamicWindows
+
+Las ventanas que un patrón tiene abiertas en este momento, para que una app
+pueda renderizar un `DesktopApp` por instancia.
+
+```tsx
+function useDynamicWindows(
+  pattern: string,
+): { href: string; params: RouteParams }[];
+```
+
+```tsx
+{useDynamicWindows("/documents/:file").map(({ href, params }) => (
+  <DocumentApp file={params.file} href={href} key={href} />
+))}
+```
+
+La lista sale de las ventanas abiertas del escritorio en lugar de de un estado
+tuyo — el escritorio ya sabe qué documentos están abiertos. Solo se devuelven
+las ventanas que el patrón reclama, así que declarar `/documents/new` junto a
+`/documents/:file` deja esa fuera de la lista.
+
+## RouteParams
+
+A qué se resolvieron los params de un patrón, indexados por el nombre que va
+después de los dos puntos. Los valores llegan decodificados, como los params de
+una página de Next.
+
+```tsx
+type RouteParams = Record<string, string>;
+```
+
+```tsx
+// "/documents/annual%20report" against "/documents/:file"
+{ file: "annual report" }
+```
+
+## RoutedDesktopProps
+
+```tsx
+type RoutedDesktopProps = Omit<
+  DesktopProps,
+  "openWindows" | "defaultOpenWindows" | "onOpenWindowsChange"
+> & {
+  exitHref?: string;
+};
+```
+
+## Una nota sobre las tripas
+
+<Callout type="warning">
+  El adaptador importa `LayoutRouterContext` de `next/dist`, que no forma parte
+  de la API pública de Next. Es el precio de tener contenido por ventana sin
+  rutas paralelas. Si una actualización de Next mueve ese módulo, el paquete deja
+  de compilar, que es el fallo ruidoso en lugar del silencioso — pero conviene
+  saber que el acoplamiento está ahí.
+</Callout>

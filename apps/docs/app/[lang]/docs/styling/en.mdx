@@ -1,0 +1,139 @@
+DayOS ships no stylesheet. There is nothing to import, nothing to override and
+no theme to fight with. What it does set is structural — a handful of
+declarations without which windows would not position, clip or scroll correctly
+— and everything else is yours.
+
+## What DayOS sets
+
+### Desktop
+
+```css
+position: relative;  /* windows are absolutely positioned against it */
+overflow: hidden;    /* and clipped by it */
+```
+
+### Window
+
+The frame is absolutely positioned with a `z-index` from its place in the stack.
+Inside it, the dialog is a flex column:
+
+```css
+display: flex;
+flex-direction: column;
+height: 100%;
+```
+
+### WindowContent
+
+```css
+flex: 1 1 0%;
+min-height: 0;
+overflow: auto;
+```
+
+This is `flex: 1` with `min-height: 0` and deliberately not `height: 100%`.
+Inside a flex column, 100% measures against the full height and ignores the
+header, so the content overflows the window instead of scrolling within it.
+
+### WindowHeader
+
+The header carries a `window-drag-handle` class. It is not styling: it is the
+selector the drag implementation uses to recognise where the window is dragged
+from. Leave it in place — it merges with whatever `className` you pass, so you
+never have to think about it.
+
+## Passing your own styles
+
+Every component takes `className` and `style`. The merge is not a replacement:
+
+- `className` goes through `clsx` and `tailwind-merge`, so a Tailwind utility of
+  yours beats the one DayOS contributed rather than both landing in the class
+  list.
+- `style` is merged key by key, and yours wins on a collision.
+- Event handlers are composed, with yours running first.
+
+<Callout>
+  You do not need Tailwind. `tailwind-merge` only knows how to deduplicate
+  Tailwind utilities; on any other class name it is a pass-through.
+</Callout>
+
+## State attributes
+
+The things worth styling by state are exposed as data attributes, so they can be
+targeted from CSS without a single line of JavaScript in your styles.
+
+<PropsTable>
+  <Prop name="data-interacting" type="Desktop">
+    Present while any window is being dragged or resized. Its main use is
+    neutralising iframes for the duration.
+  </Prop>
+  <Prop name="data-window" type="Window (server render only)">
+    Marks the static frame that appears in the server HTML, before there is a
+    desktop to portal into.
+  </Prop>
+  <Prop name="data-maximized" type="Window, WindowHeader">
+    Present while the window fills the desktop. Useful for squaring off rounded
+    corners.
+  </Prop>
+</PropsTable>
+
+```css
+.desktop[data-interacting] iframe {
+  pointer-events: none;
+}
+
+.window-header[data-maximized] {
+  border-radius: 0;
+}
+```
+
+## With Tailwind
+
+```tsx
+<Desktop className="h-dvh bg-slate-900 [&[data-interacting]_iframe]:pointer-events-none">
+  <DesktopApp id="notes">
+    <DesktopIcon className="flex flex-col items-center gap-1 rounded-lg p-2 text-white hover:bg-white/15">
+      <DesktopIconText className="text-xs">Notes</DesktopIconText>
+    </DesktopIcon>
+
+    <Window className="overflow-hidden rounded-xl border border-zinc-300 bg-zinc-100 shadow-2xl">
+      <WindowHeader className="flex cursor-grab items-center gap-2 border-b border-zinc-300 bg-white px-3 py-2 data-maximized:rounded-none">
+        <WindowName className="text-sm font-semibold">Notes</WindowName>
+        <WindowActions className="ml-auto flex gap-1">
+          <WindowClose className="size-6 rounded-md border border-zinc-300">✕</WindowClose>
+        </WindowActions>
+      </WindowHeader>
+      <WindowContent className="p-4">Hello</WindowContent>
+    </Window>
+  </DesktopApp>
+</Desktop>
+```
+
+## Focus styles
+
+Icons are real buttons and windows are focusable, so both get the browser’s
+focus ring by default. If you replace it, replace it — the desktop is a
+keyboard-navigable surface, and an icon whose focus is invisible cannot be
+found.
+
+```css
+.icon:focus-visible {
+  background: rgb(255 255 255 / 0.15);
+  border-color: rgb(255 255 255 / 0.3);
+  outline: none;
+}
+```
+
+## Cursors
+
+Nothing sets a cursor for you. The two worth adding are a `grab` cursor on the
+header, so the window looks draggable, and a pointer on the icons.
+
+```css
+.window-header {
+  cursor: grab;
+}
+```
+
+Resize cursors on the edges come from the resize handles themselves and need
+nothing from you.

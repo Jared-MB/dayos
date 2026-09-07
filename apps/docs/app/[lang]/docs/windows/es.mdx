@@ -1,0 +1,175 @@
+Una ventana es un marco que puedes arrastrar, redimensionar y maximizar. Se
+monta a partir de piezas en lugar de configurarse con props, así que una barra
+de título con tres botones y otra sin ninguno son el mismo componente con hijos
+distintos.
+
+## Las piezas
+
+```tsx
+<Window className="window">
+  <WindowHeader className="window-header">
+    <WindowName className="window-title">Notas</WindowName>
+    <WindowActions className="window-actions">
+      <WindowExpand className="window-button">▢</WindowExpand>
+      <WindowClose className="window-button">✕</WindowClose>
+    </WindowActions>
+  </WindowHeader>
+  <WindowContent className="window-content">Hola</WindowContent>
+</Window>
+```
+
+- `Window` — el marco. Entra por portal en el escritorio una vez montado.
+- `WindowHeader` — la barra de título, que es también el asa de arrastre.
+- `WindowName` — el título. Es el nombre con el que se anuncia la ventana.
+- `WindowContent` — el cuerpo, que hace scroll.
+- `WindowActions` — el grupo de controles, y `WindowAction` un botón genérico
+  que meter dentro.
+- `WindowExpand`, `WindowClose` — maximizar/restaurar y cerrar.
+
+Solo `Window` es obligatorio. Sin cabecera la ventana no se puede arrastrar,
+pero sí se puede redimensionar y cerrar.
+
+## Geometría
+
+Por defecto una ventana ocupa el 70% del escritorio, centrada, y cada ventana
+adicional se desplaza 32px respecto a la anterior para que se vea toda la pila a
+la vez. La cascada da la vuelta al llegar al borde en lugar de marcharse fuera
+de la pantalla.
+
+```tsx
+<Window
+  defaultSize={{ width: 520, height: 460 }}
+  defaultPosition={{ x: 220, y: 140 }}
+/>
+```
+
+Ambos van en píxeles, ambos son solo valores iniciales, y un `defaultPosition`
+sale de la cascada — la ventana va exactamente donde dijiste. Un tamaño mayor
+que el escritorio se recorta a él.
+
+```tsx
+<Window cascadeOffset={48} minWidth={320} minHeight={200} />
+```
+
+`minWidth` y `minHeight` valen 240 y 120 por defecto y son el suelo al
+redimensionar.
+
+<Callout>
+  La geometría se lee una sola vez, cuando la ventana se monta por primera vez.
+  Cambiar `defaultSize` después no mueve una ventana que ya está abierta — eso es
+  lo que hace la palabra _default_. Los cambios de tamaño del escritorio se
+  tratan aparte: una ventana que ya no cabe se recorta de vuelta hacia dentro.
+</Callout>
+
+### Calcular dónde va a caer una ventana
+
+Las cuentas de la colocación se exportan como `windowRect`, la misma función que
+usa la propia ventana. Es pura, así que está disponible si necesitas predecir
+una posición — para una animación de minimizado, digamos, o para persistir la
+geometría.
+
+```tsx
+import { windowRect } from "@dayos/core";
+
+const rect = windowRect({
+  desktopWidth: 1280,
+  desktopHeight: 800,
+  defaultSize: { width: 520, height: 460 },
+  cascadeStep: 2,
+});
+// { width: 520, height: 460, x: 444, y: 234 }
+```
+
+## Arrastrar y redimensionar
+
+La cabecera es el asa de arrastre. El redimensionado funciona desde cualquier
+borde o esquina. Los dos están acotados por el escritorio, y los dos traen la
+ventana al frente cuando empiezan.
+
+### Elementos que no inician un arrastre
+
+Los botones, enlaces y controles de formulario de la cabecera quedan excluidos
+del arrastre por defecto:
+
+```tsx
+dragCancel = "button, a, input, select, textarea"
+```
+
+Sin esto, pulsar el botón de restaurar empezaría además un arrastre, y la
+ventana acabaría siguiendo al cursor en lugar de volver a su posición guardada.
+Pasa tu propio selector para ampliarlo:
+
+```tsx
+<Window dragCancel="button, a, input, select, textarea, .no-drag" />
+```
+
+### Maximizar
+
+`WindowExpand` alterna entre llenar el escritorio y volver a donde estaba la
+ventana. La geometría anterior se guarda y se vuelve a acotar en el camino de
+vuelta, ya que el escritorio puede haber encogido mientras tanto.
+
+Arrastrar una ventana maximizada la restaura y la engancha al cursor,
+manteniendo el puntero sobre el mismo punto proporcional de la barra de título —
+el gesto que tienen todos los escritorios.
+
+Mientras está maximizada, tanto la ventana como su cabecera llevan
+`data-maximized`, que es cómo se le quitan las esquinas redondeadas a una
+cabecera:
+
+```css
+.window-header[data-maximized] {
+  border-radius: 0;
+}
+```
+
+## Mantener el estado mientras está cerrada
+
+Cerrar una ventana desmonta su subárbol, y todo lo que hay dentro se va: la
+posición del scroll, los campos del formulario, el punto de reproducción de un
+vídeo. `keepMounted` la mantiene en el árbol y la oculta en su lugar.
+
+```tsx
+<Window keepMounted>
+  <WindowContent>
+    <textarea />
+  </WindowContent>
+</Window>
+```
+
+Y lo hace con pereza: la ventana se monta la primera vez que se abre, no antes.
+Las apps que no se abren nunca no cuestan nada.
+
+<Callout type="warning">
+  Una ventana mantenida montada sigue montada. Los temporizadores siguen
+  corriendo, las consultas siguen refrescándose, y un vídeo sigue reproduciéndose
+  salvo que algo lo pause. Ese es el sentido de la prop, pero conviene saber
+  cuáles de tus ventanas la llevan.
+</Callout>
+
+## Cerrar
+
+`Escape` cierra la ventana enfocada salvo que lo desactives:
+
+```tsx
+<Window closeOnEscape={false} />
+```
+
+Un manejador tuyo que llame a `preventDefault()` también lo detiene, que es cómo
+una ventana con cambios sin guardar pregunta antes.
+
+## Foco y apilado
+
+Pulsar en cualquier punto de una ventana la trae al frente, y también lo hace
+enfocar cualquier cosa dentro de ella — incluido con <kbd>Tab</kbd>. El orden de
+apilado es la lista `openWindows` del escritorio, y el `z-index` sale de la
+posición de la ventana en ella.
+
+Las ventanas no son modales, y se anuncian como tales. Varias conviven y el
+resto del escritorio sigue siendo alcanzable, así que cada una es un
+`role="dialog"` con `aria-modal="false"`, etiquetada por su `WindowName`.
+
+<Callout title="Dale un WindowName a cada ventana">
+  De ahí sale el nombre accesible del diálogo. Una ventana sin él se anuncia como
+  un diálogo sin nombre, que en un escritorio lleno de ellos no es ningún nombre.
+</Callout>

@@ -3,15 +3,24 @@
  * footer and the search index all read from here, so adding a page is adding a
  * line to this file plus the route it names — and the three of them can't drift
  * apart the way they would if each kept its own list.
+ *
+ * Every language keeps its own list, but they are lists of the same pages in
+ * the same order: an `href` is language-free (`/docs/windows`, never
+ * `/es/docs/windows`) and only becomes an address through `localePath`. That is
+ * what lets the language switcher offer the reader the page they are on rather
+ * than dropping them at the index, and what keeps `siblings` walking the same
+ * route in both languages.
  */
 
+import { type Locale, localePath } from "./i18n";
 import { SITE_URL } from "./site";
 
 export type DocPage = {
+  /** Language-free, and the same string in every language's list. */
   href: string;
   title: string;
   /** Shown under the title in search results, and as the page's meta description. */
-  description: string;
+  description?: string;
   /** Extra words a reader might search for that don't appear in the title. */
   keywords?: readonly string[];
 };
@@ -21,7 +30,7 @@ export type DocSection = {
   pages: readonly DocPage[];
 };
 
-export const SECTIONS: readonly DocSection[] = [
+const EN: readonly DocSection[] = [
   {
     title: "Getting Started",
     pages: [
@@ -161,25 +170,236 @@ export const SECTIONS: readonly DocSection[] = [
   },
 ];
 
-/** Every page in sidebar order, which is also the order the footer walks. */
-export const PAGES: readonly DocPage[] = SECTIONS.flatMap(
-  (section) => section.pages,
-);
+/**
+ * The Spanish list keeps the English keywords alongside the Spanish ones: the
+ * words a reader searches for here are component names and prop names, and
+ * those are English whichever language the prose is in. Someone typing
+ * "keepMounted" or "ventanas" should land on the same page.
+ */
+const ES: readonly DocSection[] = [
+  {
+    title: "Primeros pasos",
+    pages: [
+      {
+        href: "/docs",
+        title: "Introducción",
+        description: "Un escritorio con ventanas arrastrables para React",
+        keywords: ["resumen", "qué es dayos", "headless", "sin estilos"],
+      },
+      {
+        href: "/docs/installation",
+        title: "Instalación",
+        keywords: [
+          "instalar",
+          "npm",
+          "pnpm",
+          "yarn",
+          "configuración",
+          "requisitos",
+        ],
+      },
+      {
+        href: "/docs/quick-start",
+        title: "Inicio rápido",
+        description:
+          "Construye un escritorio con dos ventanas, de un componente vacío a algo que puedes arrastrar.",
+        keywords: [
+          "tutorial",
+          "primer escritorio",
+          "ejemplo",
+          "empezar",
+          "getting started",
+        ],
+      },
+    ],
+  },
+  {
+    title: "Construye tu escritorio",
+    pages: [
+      {
+        href: "/docs/desktop-and-apps",
+        title: "Escritorio y apps",
+        description:
+          "El contenedor que gestiona las ventanas abiertas, y la app que une un icono con una ventana.",
+        keywords: [
+          "Desktop",
+          "DesktopApp",
+          "DesktopIcon",
+          "id",
+          "apilado",
+          "escritorio",
+        ],
+      },
+      {
+        href: "/docs/windows",
+        title: "Ventanas",
+        description:
+          "El marco de la ventana: geometría, arrastre, redimensionado, maximizado y las piezas que lo forman.",
+        keywords: [
+          "Window",
+          "WindowHeader",
+          "WindowContent",
+          "redimensionar",
+          "arrastrar",
+          "maximizar",
+          "keepMounted",
+        ],
+      },
+      {
+        href: "/docs/styling",
+        title: "Estilos",
+        description:
+          "DayOS no incluye CSS propio. Lo que sí define, por qué, y cómo dar estilo al resto.",
+        keywords: [
+          "css",
+          "tailwind",
+          "classname",
+          "atributos de datos",
+          "tema",
+        ],
+      },
+      {
+        href: "/docs/composition",
+        title: "Composición",
+        description:
+          "La render prop que cambia el elemento que emite un componente sin perder su comportamiento.",
+        keywords: ["render", "asChild", "slot", "Link", "polimórfico"],
+      },
+      {
+        href: "/docs/state",
+        title: "Controlar el estado",
+        description:
+          "Abre ventanas sin control externo, o gobiérnalas desde fuera para persistencia, un dock o atajos.",
+        keywords: [
+          "controlado",
+          "no controlado",
+          "openWindows",
+          "defaultOpen",
+          "useDesktop",
+        ],
+      },
+      {
+        href: "/docs/server-rendering",
+        title: "Renderizado en servidor",
+        description:
+          "Cómo llega al HTML una ventana abierta, y por qué no salta cuando React toma el control.",
+        keywords: [
+          "ssr",
+          "hidratación",
+          "server components",
+          "parpadeo",
+          "estático",
+        ],
+      },
+    ],
+  },
+  {
+    title: "Rutas",
+    pages: [
+      {
+        href: "/docs/routing",
+        title: "Ventanas con URL",
+        description:
+          "Dale a cada ventana una ruta propia con el adaptador del App Router de Next.",
+        keywords: ["@dayos/next", "next", "app router", "url", "enlace"],
+      },
+      {
+        href: "/docs/routing/dynamic-routes",
+        title: "Rutas dinámicas",
+        description:
+          "Una sola declaración que vale por una ventana por documento, tarea o registro.",
+        keywords: [
+          "patrón",
+          "params",
+          "useDynamicWindows",
+          "slug",
+          ":file",
+          "dinámicas",
+        ],
+      },
+      {
+        href: "/docs/routing/matching",
+        title: "Coincidencia de rutas",
+        description:
+          "A qué ventana pertenece una URL cuando varias rutas podrían reclamarla.",
+        keywords: [
+          "especificidad",
+          "subrutas",
+          "anidadas",
+          "precedencia",
+          "404",
+        ],
+      },
+    ],
+  },
+  {
+    title: "Referencia de la API",
+    pages: [
+      {
+        href: "/docs/api/core",
+        title: "@dayos/core",
+        description:
+          "Todos los componentes, hooks y props que exporta el núcleo, con sus valores por defecto.",
+        keywords: ["referencia", "props", "tipos", "hooks", "windowRect"],
+      },
+      {
+        href: "/docs/api/next",
+        title: "@dayos/next",
+        description:
+          "Las cuatro exportaciones del adaptador de Next, y de qué se ocupa cada una.",
+        keywords: [
+          "referencia",
+          "WindowRouteProvider",
+          "RoutedDesktop",
+          "useWindowRoute",
+        ],
+      },
+    ],
+  },
+];
 
-export const findPage = (href: string) =>
-  PAGES.find((page) => page.href === href);
+const SECTIONS: Record<Locale, readonly DocSection[]> = { en: EN, es: ES };
+
+export const sections = (locale: Locale) => SECTIONS[locale];
+
+const flatten = (list: readonly DocSection[]) =>
+  list.flatMap((section) => section.pages);
+
+/** Every page in sidebar order, which is also the order the footer walks. */
+const PAGES: Record<Locale, readonly DocPage[]> = {
+  en: flatten(EN),
+  es: flatten(ES),
+};
+
+export const pages = (locale: Locale) => PAGES[locale];
+
+/**
+ * The hrefs themselves, in reading order. The routes and the sitemap need the
+ * list of pages without caring which language they are read in, and taking it
+ * from one language rather than from a fourth list is what makes a page missing
+ * from a translation a build error instead of a hole in the sitemap.
+ */
+export const HREFS: readonly string[] = flatten(EN).map((page) => page.href);
+
+export const findPage = (locale: Locale, href: string) =>
+  PAGES[locale].find((page) => page.href === href);
 
 /**
  * The pages either side of this one. Reading the docs front to back is a real
  * way to use them, so every page ends with the way onward.
  */
-export const siblings = (href: string) => {
-  const index = PAGES.findIndex((page) => page.href === href);
+export const siblings = (locale: Locale, href: string) => {
+  const list = PAGES[locale];
+  const index = list.findIndex((page) => page.href === href);
 
   if (index === -1) return { previous: undefined, next: undefined };
 
-  return { previous: PAGES[index - 1], next: PAGES[index + 1] };
+  return { previous: list[index - 1], next: list[index + 1] };
 };
+
+/** Where a page lives in a given language, ready to put in an `href`. */
+export const pageHref = (locale: Locale, href: string) =>
+  localePath(locale, href);
 
 /**
  * Where a page's Markdown twin lives: the same path with `.md` on the end, so
@@ -187,11 +407,14 @@ export const siblings = (href: string) => {
  * It lives here rather than beside the routes that serve it because the button
  * offering it runs in the browser, and must not drag the pages in with it.
  */
-export const markdownHref = (href: string) => `${href}.md`;
+export const markdownHref = (locale: Locale, href: string) =>
+  `${localePath(locale, href)}.md`;
 
-export const markdownUrl = (href: string) =>
-  new URL(markdownHref(href), SITE_URL).toString();
+export const markdownUrl = (locale: Locale, href: string) =>
+  new URL(markdownHref(locale, href), SITE_URL).toString();
 
 /** The section a page belongs to, for the breadcrumb above its title. */
-export const sectionOf = (href: string) =>
-  SECTIONS.find((section) => section.pages.some((page) => page.href === href));
+export const sectionOf = (locale: Locale, href: string) =>
+  SECTIONS[locale].find((section) =>
+    section.pages.some((page) => page.href === href),
+  );

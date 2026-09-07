@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { LOCALES, toLocale } from "../_lib/i18n";
+import { OG_TAGLINE, SITE_TITLE } from "../_lib/site";
 
 /**
  * The card every link to the docs unfurls into. It draws the thing the library
@@ -11,9 +13,25 @@ import { ImageResponse } from "next/og";
  * out of `globals.css` because custom properties don't resolve here.
  */
 
-export const alt = "DayOS — A windowed desktop for React";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+type Params = { params: Promise<{ lang: string }> };
+
+export function generateStaticParams() {
+  return LOCALES.map((lang) => ({ lang }));
+}
+
+/**
+ * `alt` cannot be a plain export here the way it can on a card that never
+ * changes: the sentence it holds is the page's, and the page has a language.
+ * Declaring the image through `generateImageMetadata` is what lets it vary.
+ */
+export async function generateImageMetadata({ params }: Params) {
+  const lang = toLocale((await params).lang);
+
+  return [{ id: lang, alt: SITE_TITLE[lang], size, contentType }];
+}
 
 const BG = "#0a0a0a";
 const RAISED = "#141414";
@@ -105,7 +123,9 @@ function Frame({
   );
 }
 
-export default function OpengraphImage() {
+export default async function OpengraphImage({ params }: Params) {
+  const lang = toLocale((await params).lang);
+
   return new ImageResponse(
     <div
       style={{
@@ -179,8 +199,7 @@ export default function OpengraphImage() {
             color: MUTED,
           }}
         >
-          A desktop with draggable windows for React. No styling of its own, and
-          no knowledge of routes.
+          {OG_TAGLINE[lang]}
         </div>
 
         <div

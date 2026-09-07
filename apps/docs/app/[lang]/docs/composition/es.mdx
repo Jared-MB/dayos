@@ -1,0 +1,125 @@
+Cada componente de DayOS emite un elemento razonable: un icono es un `button`,
+una cabecera es un `header`, un título es un `h2`. Cuando ese no es el elemento
+adecuado, la prop `render` lo cambia y conserva el comportamiento.
+
+## La render prop
+
+Recibe un elemento, no un componente ni una función. DayOS lo clona con sus
+propias props fusionadas dentro:
+
+```tsx
+import Link from "next/link";
+
+<DesktopIcon render={<Link href="/notes" />}>Notas</DesktopIcon>
+```
+
+El resultado es un enlace que navega al pulsarlo y abre la ventana al hacer
+doble clic, con el manejo de teclado del icono intacto. Es un solo elemento, no
+un enlace envolviendo a un botón.
+
+<Callout>
+  No pongas hijos en el elemento renderizado. Van en el componente de DayOS, como
+  arriba — los que le pasaras a `render` los sobrescribiría la fusión.
+</Callout>
+
+### Cómo se fusionan las props
+
+Entre lo que aporta DayOS y lo que hay en tu elemento, las reglas son:
+
+- `className` — se unen, y los conflictos de Tailwind se resuelven a tu favor.
+- `style` — se fusiona clave a clave, y gana la tuya.
+- Manejadores de eventos — se componen, primero DayOS y después el tuyo.
+- Todo lo demás — gana lo tuyo, sin más.
+
+Por eso un `aria-label` en un `WindowClose` sobrescribe el que viene de serie en
+lugar de ignorarse.
+
+## Cancelar el comportamiento de serie
+
+Cuando le pasas un manejador directamente a un componente de DayOS en lugar de a
+través de `render`, el tuyo se ejecuta _primero_ y puede detener lo que habría
+venido después:
+
+```tsx
+<WindowClose
+  onClick={(event) => {
+    if (hasUnsavedChanges) {
+      event.preventDefault();
+      setConfirming(true);
+    }
+  }}
+>
+  ✕
+</WindowClose>
+```
+
+Lo mismo vale para el `onDoubleClick` y el `onKeyDown` de `DesktopIcon`, y para
+el `onClick` de `WindowExpand`.
+
+## Envolver un componente de DayOS
+
+Un envoltorio tuyo que siga aceptando `render` necesita el tipo `RenderProp`,
+que se exporta exactamente para esto:
+
+```tsx
+import { DesktopIcon, type RenderProp } from "@dayos/core";
+
+export function AppIcon({
+  glyph,
+  label,
+  render,
+}: {
+  glyph: string;
+  label: string;
+  render?: RenderProp<React.ComponentProps<"button">>;
+}) {
+  return (
+    <DesktopIcon className="icon" render={render}>
+      <span aria-hidden="true" className="icon-glyph">
+        {glyph}
+      </span>
+      <DesktopIconText>{label}</DesktopIconText>
+    </DesktopIcon>
+  );
+}
+```
+
+## Cambios habituales
+
+### Un icono que es un enlace
+
+Con `@dayos/next` así es como un icono abre una ventana y a la vez le da la URL
+a quien quiera copiarla:
+
+```tsx
+<DesktopIcon render={<Link href={href} />}>
+  <DesktopIconText>{title}</DesktopIconText>
+</DesktopIcon>
+```
+
+### Un título que no es un h2
+
+`WindowName` es un `h2`, lo cual es correcto cuando una ventana es una sección
+de la página e incorrecto cuando no lo es. Cambia el elemento sin perder el id
+que etiqueta el diálogo:
+
+```tsx
+<WindowName render={<span />}>Notas</WindowName>
+```
+
+### Un control que abre un menú
+
+```tsx
+<WindowActions>
+  <WindowAction render={<DropdownMenu.Trigger />}>⋯</WindowAction>
+  <WindowExpand>▢</WindowExpand>
+  <WindowClose>✕</WindowClose>
+</WindowActions>
+```
+
+<Callout type="warning" title="Un nivel cada vez">
+  `render` reemplaza el elemento que emite un componente, así que encadenar dos
+  librerías que usan ambas la técnica significa que cada una clona a la
+  siguiente. Funciona, pero conviene revisar el orden de la fusión cuando un
+  manejador no se dispara.
+</Callout>

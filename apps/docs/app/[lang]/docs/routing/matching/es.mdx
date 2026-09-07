@@ -1,0 +1,103 @@
+Una URL pertenece exactamente a una ventana. Cuando varias rutas declaradas
+podrían reclamarla, las reglas de abajo deciden cuál — y merece la pena
+conocerlas, porque la respuesta determina si un documento se abre al lado de su
+lista o dentro de ella.
+
+## Una ventana es dueña de sus subrutas
+
+A una ruta le basta con cubrir el principio del pathname. Dado `/docs`, la URL
+`/docs/api` también es de esa ventana, y su href sigue siendo `/docs`.
+
+Esto es lo que hace que funcione la navegación _dentro_ de una ventana: seguir
+un enlace dentro de la ventana de documentación te mantiene en ella en lugar de
+abrir una segunda.
+
+<Callout>
+  La coincidencia es por segmento, no por prefijo de cadena. `/docs` no reclama
+  `/docsy`.
+</Callout>
+
+### La raíz es la excepción
+
+`/` no consume ningún segmento, así que si fuera dueña de lo que hay debajo,
+todas las URL del sitio serían de la ventana de inicio y una URL que no
+pertenece a ninguna ruta — un 404 — dejaría de serlo. Solo coincide consigo
+misma.
+
+## Especificidad
+
+Cuando coincide más de una ruta, la ganadora se decide en este orden:
+
+1. **Gana la que tenga más segmentos.** `/docs/api` gana a `/docs`, así que se
+   abre la ventana concreta y no la que la contiene.
+2. **A igual profundidad, un literal gana a un param.** `/documents/new` gana a
+   `/documents/:file`.
+
+La segunda regla se aplica segmento a segmento, así que un literal gana a la
+profundidad a la que aparece:
+
+```tsx
+const ROUTES = [
+  "/projects",
+  "/projects/archive",        // wins over /projects/:project
+  "/projects/:project",
+  "/projects/:project/new",   // wins over /projects/:project/:task
+  "/projects/:project/:task",
+] as const;
+```
+
+## Ejemplos resueltos
+
+Dadas las rutas de arriba:
+
+```tsx
+"/projects"                → /projects
+"/projects/archive"        → /projects/archive
+"/projects/dayos"          → /projects/:project     params { project: "dayos" }
+"/projects/dayos/new"      → /projects/:project/new params { project: "dayos" }
+"/projects/dayos/ship-it"  → /projects/:project/:task
+                             params { project: "dayos", task: "ship-it" }
+"/projects/dayos/ship-it/comments"
+                           → /projects/:project/:task  (a subroute of that window)
+"/settings"                → no window
+```
+
+## Declarar un patrón es una decisión
+
+Dejar `/documents/:file` fuera del array de rutas no es una funcionalidad que
+falte — es el otro comportamiento razonable. Sin él, `/documents` reclama sus
+subrutas, y un documento se abre _dentro_ de la ventana de la lista en lugar de
+a su lado.
+
+- **Patrón declarado:** una ventana por documento. La lista se queda en su
+  propia página.
+- **Patrón no declarado:** una ventana, que navega de la lista al documento y de
+  vuelta.
+
+Los dos son útiles. Elige ruta por ruta.
+
+## URL que no coinciden con nada
+
+No se abre ninguna ventana, y el escritorio queda vacío. Esto es lo que hace que
+un 404 sea un 404. También significa que la URL con la que se cargó la página
+gana hasta que algo toque el estado de las ventanas — si no, cerrar la última
+ventana te sacaría de una página que la visita sí quería ver.
+
+## Query strings y hashes
+
+La coincidencia solo mira el pathname, así que `/documents/report?page=2`
+pertenece a la misma ventana que `/documents/report`. La URL completa sí se
+recuerda por ventana: volver a una ventana restaura el query y el hash que
+tenía, no solo su href pelado.
+
+## Segmentos codificados
+
+Los params vuelven decodificados. Una ventana en `/documents/annual%20report`
+recibe `params.file === "annual report"`, mientras que el href conserva su forma
+de URL — el href identifica la ventana y es lo que se compara con el pathname.
+
+<Callout type="warning" title="Depurar una ventana que no se abre">
+  Casi siempre es una de dos cosas: la ruta no está en el array `routes`, o una
+  ruta más amplia está reclamando la URL primero. Mira qué dice la especificidad
+  sobre las rutas que coinciden las dos.
+</Callout>

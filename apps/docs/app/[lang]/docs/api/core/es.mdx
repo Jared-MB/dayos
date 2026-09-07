@@ -1,0 +1,394 @@
+Todas las exportaciones de `@dayos/core`. El paquete es de cliente de principio
+a fin — su punto de entrada lleva `"use client"` — y tiene React 19 como peer
+dependency.
+
+```tsx
+import {
+  Desktop,
+  DesktopApp,
+  DesktopIcon,
+  DesktopIconText,
+  Window,
+  WindowAction,
+  WindowActions,
+  WindowClose,
+  WindowContent,
+  WindowExpand,
+  WindowHeader,
+  WindowName,
+  useDesktop,
+  useDesktopApp,
+  useOptionalDesktopApp,
+  windowRect,
+  type RenderProp,
+} from "@dayos/core";
+```
+
+## Desktop
+
+El contenedor, y el dueño de qué ventanas están abiertas. Renderiza un `div`.
+
+<PropsTable>
+  <Prop name="children" type="React.ReactNode">
+    Las apps, y cualquier otra cosa que vaya en el escritorio.
+  </Prop>
+  <Prop name="wallpaper" type="string">
+    Atajo para una imagen de fondo: define backgroundImage, size cover, position
+    center y sin repetición. Para un degradado, usa CSS.
+  </Prop>
+  <Prop name="openWindows" type="string[]">
+    Ventanas abiertas de forma controlada, en orden de apilado — la última está
+    delante. Pasarla convierte el escritorio en controlado.
+  </Prop>
+  <Prop name="defaultOpenWindows" type="string[]" default="[]">
+    Estado inicial sin control externo. La única forma de tener una ventana
+    abierta en el HTML del servidor.
+  </Prop>
+  <Prop name="onOpenWindowsChange" type="(openWindows: string[]) => void">
+    Se dispara en cada apertura, cierre y cambio de foco, venga de donde venga.
+  </Prop>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"div">>'>
+    Reemplaza el `div` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"div">'>
+    Todo lo demás se reenvía al `div`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+### Estilos en línea que define
+
+```css
+position: relative;
+overflow: hidden;
+```
+
+{/*
+  Cualificado en lugar de un simple "Atributos de datos", que la sección de
+  Window también quiere: dos encabezados con el mismo texto son dos slugs
+  idénticos, y los anclajes dejan de poder distinguirlos.
+*/}
+
+### Atributos de datos de Desktop
+
+<PropsTable>
+  <Prop name="data-interacting" type="presente | ausente">
+    Presente mientras se arrastra o redimensiona una ventana.
+  </Prop>
+</PropsTable>
+
+## DesktopApp
+
+Una app: un icono y una ventana unidos por un id. No renderiza ningún elemento
+propio.
+
+<PropsTable>
+  <Prop name="children" type="React.ReactNode">
+    Obligatorio. Normalmente un DesktopIcon y una Window.
+  </Prop>
+  <Prop name="id" type="string" default="useId()">
+    La identidad de la ventana, y con `@dayos/next` también su href. Que dos apps
+    compartan un id es un error, que se registra en desarrollo.
+  </Prop>
+  <Prop name="defaultOpen" type="boolean" default="false">
+    Abre la ventana al montar y no vuelve a tocarla. Se ejecuta en un efecto, así
+    que no llega al HTML del servidor.
+  </Prop>
+  <Prop name="open" type="boolean">
+    Controlado: mantiene la ventana en sincronía con este valor en ambos
+    sentidos.
+  </Prop>
+  <Prop name="onOpenChange" type="(open: boolean) => void">
+    Se dispara venga el cambio de donde venga — un botón, una ruta, un atajo,
+    otra ventana.
+  </Prop>
+</PropsTable>
+
+## DesktopIcon
+
+Un `button` que abre la ventana de su app con doble clic, o con <kbd>Enter</kbd>
+/ <kbd>Espacio</kbd>. Tu `onDoubleClick` y tu `onKeyDown` se ejecutan primero y
+pueden cancelar la apertura con `preventDefault()`.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"button">>'>
+    Reemplaza el `button` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"button">'>
+    Todo lo demás se reenvía al `button`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## DesktopIconText
+
+La etiqueta del icono, como un `span`. Existe para que la etiqueta sea un
+elemento al que dar estilo en lugar de un nodo de texto suelto.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"span">>'>
+    Reemplaza el `span` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"span">'>
+    Todo lo demás se reenvía al `span`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## Window
+
+El marco. Entra por portal en el escritorio una vez montado; se renderiza en su
+sitio, y sin arrastre, cuando todavía no hay nodo de escritorio — el render de
+servidor y el de hidratación.
+
+<PropsTable>
+  <Prop name="children" type="React.ReactNode">
+    Obligatorio. La cabecera y el contenido.
+  </Prop>
+  <Prop
+    name="defaultSize"
+    type="{ width: number; height: number }"
+    default="70% del escritorio"
+  >
+    Tamaño inicial en píxeles, acotado al escritorio. Se lee una sola vez, cuando
+    la ventana se monta por primera vez.
+  </Prop>
+  <Prop
+    name="defaultPosition"
+    type="{ x: number; y: number }"
+    default="centrada, en cascada"
+  >
+    Posición inicial en píxeles. Pasarla saca a la ventana de la cascada.
+  </Prop>
+  <Prop name="minWidth" type="number" default="240">
+    Suelo al redimensionar.
+  </Prop>
+  <Prop name="minHeight" type="number" default="120">
+    Suelo al redimensionar.
+  </Prop>
+  <Prop name="cascadeOffset" type="number" default="32">
+    Píxeles que se desplaza cada ventana sucesiva. La cascada da la vuelta en
+    lugar de salirse de la pantalla.
+  </Prop>
+  <Prop name="keepMounted" type="boolean" default="false">
+    Mantiene la ventana en el árbol mientras está cerrada, para que su estado
+    sobreviva. Aun así solo se monta la primera vez que se abre.
+  </Prop>
+  <Prop name="closeOnEscape" type="boolean" default="true">
+    Escape cierra la ventana enfocada. Un manejador que llame a
+    `preventDefault()` también lo detiene.
+  </Prop>
+  <Prop
+    name="dragCancel"
+    type="string"
+    default='"button, a, input, select, textarea"'
+  >
+    Selector de los elementos que no inician un arrastre. Sin él, pulsar un botón
+    de la cabecera empezaría además a arrastrar.
+  </Prop>
+  <Prop name="className" type="string">
+    Se aplica al marco.
+  </Prop>
+  <Prop name="style" type="React.CSSProperties">
+    Se fusiona con los estilos de posicionamiento del propio marco.
+  </Prop>
+</PropsTable>
+
+<Callout>
+  `Window` no acepta una prop `render`. El marco es la implementación del
+  arrastre y el redimensionado, y cambiarle el elemento por debajo no es algo que
+  pueda respetar.
+</Callout>
+
+### Atributos de datos de Window
+
+<PropsTable>
+  <Prop name="data-window" type="presente | ausente">
+    Solo en el marco estático — el que aparece en el HTML del servidor.
+  </Prop>
+  <Prop name="data-maximized" type="presente | ausente">
+    Presente mientras la ventana llena el escritorio.
+  </Prop>
+</PropsTable>
+
+## WindowHeader
+
+La barra de título y el asa de arrastre, como un `header`. Lleva siempre la
+clase `window-drag-handle`, que es cómo la reconoce la implementación del
+arrastre — eso es maquinaria, no estilo, y se fusiona con el `className` que
+pases.
+
+Lleva `data-maximized` mientras la ventana está maximizada.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"header">>'>
+    Reemplaza el `header` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"header">'>
+    Todo lo demás se reenvía al `header`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## WindowName
+
+El título de la ventana, como un `h2`. Aporta el id con el que se etiqueta el
+diálogo, así que todas las ventanas deberían tener uno.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"h2">>'>
+    Reemplaza el `h2` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"h2">'>
+    Todo lo demás se reenvía al `h2`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## WindowContent
+
+El cuerpo con scroll, como un `div`.
+
+```css
+flex: 1 1 0%;
+min-height: 0;
+overflow: auto;
+```
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"div">>'>
+    Reemplaza el `div` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"div">'>
+    Todo lo demás se reenvía al `div`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## WindowActions
+
+El grupo de controles, como un `div`. Puro contenedor — no añade comportamiento.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"div">>'>
+    Reemplaza el `div` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"div">'>
+    Todo lo demás se reenvía al `div`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## WindowAction
+
+Un botón de control genérico, para cualquier cosa que no sea maximizar ni
+cerrar.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"button">>'>
+    Reemplaza el `button` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"button">'>
+    Todo lo demás se reenvía al `button`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## WindowExpand
+
+Maximiza y restaura. Está `aria-pressed` cuando la ventana está maximizada, y su
+nombre accesible cambia con su estado — una sola etiqueta solo podría describir
+la mitad de lo que hace.
+
+<PropsTable>
+  <Prop name="maximizeLabel" type="string" default='"Maximize window"'>
+    El nombre accesible mientras la ventana no está maximizada.
+  </Prop>
+  <Prop name="restoreLabel" type="string" default='"Restore window"'>
+    El nombre accesible mientras sí lo está.
+  </Prop>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"button">>'>
+    Reemplaza el `button` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"button">'>
+    Todo lo demás se reenvía al `button`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## WindowClose
+
+Cierra la ventana, a través del `close` de la app para que el cambio llegue
+también a quien la controle desde fuera. Etiquetada como `"Close window"` salvo
+que pases tu propio `aria-label`.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"button">>'>
+    Reemplaza el `button` que emite este componente, conservando su comportamiento.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"button">'>
+    Todo lo demás se reenvía al `button`. `className` se fusiona, `style` se
+    fusiona clave a clave, y los manejadores se componen.
+  </Prop>
+</PropsTable>
+
+## useDesktop
+
+El estado y los controles del escritorio. Lanza un error fuera de `Desktop`.
+
+```tsx
+const {
+  desktopEl,        // HTMLDivElement | null — null until mount
+  openWindows,      // string[] — stacking order, last is in front
+  activeWindowId,   // string | undefined
+  openWindow,       // (id: string) => void — opens, or brings to front
+  closeWindow,      // (id: string) => void
+  focusWindow,      // (id: string) => void — front without opening
+  isInteracting,    // boolean — a drag or resize is in progress
+  setInteracting,   // (interacting: boolean) => void
+} = useDesktop();
+```
+
+## useDesktopApp
+
+La app que te contiene. Lanza un error fuera de `DesktopApp`.
+
+```tsx
+const {
+  id,             // string
+  isWindowOpen,   // boolean
+  open,           // () => void
+  close,          // () => void
+  focus,          // () => void
+} = useDesktopApp();
+```
+
+## useOptionalDesktopApp
+
+Lo mismo, pero devolviendo `null` fuera de un `DesktopApp` en lugar de lanzar un
+error. Para componentes compartidos entre contextos con ventana y sin ella.
+
+## windowRect
+
+Dónde va una ventana recién abierta. Pura, y exportada porque es toda la
+aritmética de posición inicial que hay — útil si necesitas predecir una posición
+en lugar de leerla después.
+
+```tsx
+function windowRect(options: {
+  desktopWidth: number;
+  desktopHeight: number;
+  defaultSize?: { width: number; height: number };
+  defaultPosition?: { x: number; y: number };
+  cascadeStep?: number;    // default 0
+  cascadeOffset?: number;  // default 32
+}): { x: number; y: number; width: number; height: number };
+```
+
+## RenderProp
+
+El tipo de la prop `render`, exportado para envoltorios tuyos que la reenvíen.
+
+```tsx
+type RenderProp<P> = React.ReactElement<P>;
+```

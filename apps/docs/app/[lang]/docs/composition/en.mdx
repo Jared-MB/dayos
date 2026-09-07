@@ -1,0 +1,123 @@
+Every DayOS component emits a sensible element: an icon is a `button`, a header
+is a `header`, a title is an `h2`. When that is the wrong element, the `render`
+prop swaps it out and keeps the behavior.
+
+## The render prop
+
+It takes an element, not a component or a function. DayOS clones it with its own
+props merged in:
+
+```tsx
+import Link from "next/link";
+
+<DesktopIcon render={<Link href="/notes" />}>Notes</DesktopIcon>
+```
+
+The result is an anchor that navigates when clicked and opens the window when
+double clicked, with the icon’s keyboard handling intact. It is one element, not
+a link wrapped around a button.
+
+<Callout>
+  Do not put children on the rendered element. They go on the DayOS component, as
+  above — the ones you pass to `render` would be overwritten by the merge.
+</Callout>
+
+### How props are merged
+
+Between what DayOS contributes and what is on your element, the rules are:
+
+- `className` — joined, with Tailwind conflicts resolved in your favour.
+- `style` — merged key by key, yours winning.
+- Event handlers — composed, DayOS running first, then yours.
+- Anything else — yours wins outright.
+
+This is why `aria-label` on a `WindowClose` overrides the built-in one instead
+of being ignored.
+
+## Cancelling the built-in behavior
+
+Where you pass a handler directly to a DayOS component rather than through
+`render`, yours runs _first_ and can stop what would have followed:
+
+```tsx
+<WindowClose
+  onClick={(event) => {
+    if (hasUnsavedChanges) {
+      event.preventDefault();
+      setConfirming(true);
+    }
+  }}
+>
+  ✕
+</WindowClose>
+```
+
+The same applies to `DesktopIcon`’s `onDoubleClick` and `onKeyDown`, and to
+`WindowExpand`’s `onClick`.
+
+## Wrapping a DayOS component
+
+A wrapper of your own that still accepts `render` needs the `RenderProp` type,
+which is exported for exactly this:
+
+```tsx
+import { DesktopIcon, type RenderProp } from "@dayos/core";
+
+export function AppIcon({
+  glyph,
+  label,
+  render,
+}: {
+  glyph: string;
+  label: string;
+  render?: RenderProp<React.ComponentProps<"button">>;
+}) {
+  return (
+    <DesktopIcon className="icon" render={render}>
+      <span aria-hidden="true" className="icon-glyph">
+        {glyph}
+      </span>
+      <DesktopIconText>{label}</DesktopIconText>
+    </DesktopIcon>
+  );
+}
+```
+
+## Common swaps
+
+### An icon that is a link
+
+With `@dayos/next` this is how an icon both opens a window and gives the URL to
+the person who wants to copy it:
+
+```tsx
+<DesktopIcon render={<Link href={href} />}>
+  <DesktopIconText>{title}</DesktopIconText>
+</DesktopIcon>
+```
+
+### A title that is not an h2
+
+`WindowName` is an `h2`, which is right when a window is a section of the page
+and wrong when it is not. Swap the element without losing the id that labels the
+dialog:
+
+```tsx
+<WindowName render={<span />}>Notes</WindowName>
+```
+
+### A control that is a menu trigger
+
+```tsx
+<WindowActions>
+  <WindowAction render={<DropdownMenu.Trigger />}>⋯</WindowAction>
+  <WindowExpand>▢</WindowExpand>
+  <WindowClose>✕</WindowClose>
+</WindowActions>
+```
+
+<Callout type="warning" title="One level at a time">
+  `render` replaces the element a component emits, so chaining two libraries that
+  both use the technique means each one clones the next. It works, but the merge
+  order is worth checking when a handler does not fire.
+</Callout>

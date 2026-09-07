@@ -1,9 +1,11 @@
-import { pageMarkdown } from "../../_lib/doc-source";
-import { markdownResponse } from "../../_lib/markdown-response";
-import { PAGES } from "../../_lib/nav";
+import { pageMarkdown } from "../../../_lib/doc-source";
+import { LOCALES, toLocale } from "../../../_lib/i18n";
+import { markdownResponse } from "../../../_lib/markdown-response";
+import { HREFS } from "../../../_lib/nav";
 
 /**
- * `/docs/installation.md`, and the same for every page under `/docs`.
+ * `/docs/installation.md`, and the same for every page under `/docs`, in every
+ * language.
  *
  * A catch-all sits below the static routes, so it is reached only by paths no
  * page claims — which is every `.md` twin and nothing else. Every one of them
@@ -14,22 +16,28 @@ import { PAGES } from "../../_lib/nav";
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return PAGES.filter((page) => page.href !== "/docs").map((page) => {
-    const segments = page.href.replace("/docs/", "").split("/");
-    const last = segments.length - 1;
+  return LOCALES.flatMap((lang) =>
+    HREFS.filter((href) => href !== "/docs").map((href) => {
+      const segments = href.replace("/docs/", "").split("/");
+      const last = segments.length - 1;
 
-    return {
-      slug: [...segments.slice(0, last), `${segments[last]}.md`],
-    };
-  });
+      return {
+        lang,
+        slug: [...segments.slice(0, last), `${segments[last]}.md`],
+      };
+    }),
+  );
 }
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ slug: string[] }> },
+  { params }: { params: Promise<{ lang: string; slug: string[] }> },
 ) {
-  const { slug } = await params;
-  const markdown = pageMarkdown(`/docs/${slug.join("/")}`.replace(/\.md$/, ""));
+  const { lang, slug } = await params;
+  const markdown = pageMarkdown(
+    toLocale(lang),
+    `/docs/${slug.join("/")}`.replace(/\.md$/, ""),
+  );
 
   if (!markdown) return new Response("Not found", { status: 404 });
 

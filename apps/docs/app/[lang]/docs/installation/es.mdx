@@ -1,0 +1,138 @@
+## El núcleo
+
+Todo salvo las URL vive en `@dayos/core`. Es una librería de React y nada más:
+no sabe nada de Next, y no sabe nada de ningún router.
+
+```bash
+pnpm add @dayos/core
+```
+
+O con npm y yarn:
+
+```bash
+npm install @dayos/core
+```
+
+```bash
+yarn add @dayos/core
+```
+
+## El adaptador de Next
+
+Si quieres que cada ventana tenga una URL propia, añade `@dayos/next` junto al
+núcleo. El adaptador declara el núcleo como peer dependency, así que entran los
+dos.
+
+```bash
+pnpm add @dayos/core @dayos/next
+```
+
+<Callout>
+  El adaptador es opcional en el sentido literal: dejarlo fuera no cuesta
+  ninguna funcionalidad más allá de las URL. Un escritorio construido solo sobre
+  el núcleo funciona igual, en una sola página.
+</Callout>
+
+## Requisitos
+
+### Peer dependencies
+
+El núcleo necesita React 19, que declara como peer dependency en lugar de
+empaquetarlo:
+
+```json title="package.json"
+{
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+El adaptador añade Next encima de eso:
+
+```json title="package.json"
+{
+  "peerDependencies": {
+    "@dayos/core": "^0.2.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+### Dependencias empaquetadas
+
+El núcleo trae tres propias: `react-rnd` para arrastrar y redimensionar, y
+`clsx` con `tailwind-merge` para unir las clases que pasas con las que aporta un
+componente. No hace falta que uses Tailwind — la fusión no hace nada con nombres
+de clase que no sean utilidades de Tailwind.
+
+## Componentes de cliente
+
+El núcleo es de cliente de principio a fin: usa contexto, efectos y portales. Su
+punto de entrada lleva `"use client"`, así que importarlo desde un componente de
+servidor no da problemas — pero el componente que renderiza tu escritorio es un
+componente de cliente, y el archivo donde vive necesita la directiva.
+
+```tsx title="app/shell.tsx"
+"use client";
+
+import { Desktop } from "@dayos/core";
+
+export function Shell({ children }: { children: React.ReactNode }) {
+  return <Desktop className="desktop">{children}</Desktop>;
+}
+```
+
+<Callout
+  type="warning"
+  title="Esto no convierte tus páginas en componentes de cliente"
+>
+  El shell es un componente de cliente; el contenido que va dentro de una
+  ventana no tiene por qué serlo. En una app de Next las páginas siguen siendo
+  componentes de servidor y su salida renderizada se pasa como children — el
+  escritorio nunca las renderiza, solo las posiciona.
+</Callout>
+
+## CSS estructural
+
+DayOS solo le da tamaño a una ventana si tú se lo das al escritorio. El
+escritorio es `position: relative` y nada más, así que sin altura se colapsa y
+todas las ventanas que hay dentro quedan recortadas.
+
+```css
+.desktop {
+  height: 100dvh;
+  background: linear-gradient(140deg, #1e3a5f, #0f172a 60%, #312e81);
+}
+```
+
+Merece la pena añadir una regla más desde el principio si tus ventanas pueden
+llegar a contener un iframe:
+
+```css
+/*
+ * While a window is being dragged, an iframe under the cursor would swallow the
+ * mouseup the drag listens for, and the window would stay stuck to the pointer.
+ */
+.desktop[data-interacting] iframe {
+  pointer-events: none;
+}
+```
+
+`data-interacting` se pone en el escritorio siempre que se está arrastrando o
+redimensionando una ventana. DayOS no puede escribir esa regla por su cuenta: es
+una regla sobre descendientes, y un estilo en línea no puede expresar una.
+
+## Siguientes pasos
+
+<Cards>
+  <Card href="/es/docs/quick-start" title="Inicio rápido">
+    Pon en pantalla un escritorio con dos ventanas.
+  </Card>
+  <Card href="/es/docs/styling" title="Estilos">
+    Qué define DayOS, y cómo dar estilo a todo lo demás.
+  </Card>
+</Cards>

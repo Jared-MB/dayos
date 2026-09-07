@@ -1,54 +1,96 @@
 import type { Metadata } from "next";
-import { THEME_SCRIPT } from "./_components/theme-toggle";
-import { TopNav } from "./_components/top-nav";
-import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "./_lib/site";
-import "./globals.css";
+import { LocaleProvider } from "../_components/locale-provider";
+import { ThemeProvider } from "../_components/theme-provider";
+import { TopNav } from "../_components/top-nav";
+import { dictionary } from "../_lib/dictionary";
+import {
+  LOCALES,
+  languageAlternates,
+  localePath,
+  OG_LOCALES,
+  toLocale,
+} from "../_lib/i18n";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_URL,
+} from "../_lib/site";
+import "../globals.css";
 
-export const metadata: Metadata = {
-  // Without this the relative URLs below stay relative, and a link shared
-  // anywhere off the site loses its card.
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: SITE_TITLE,
-    template: "%s",
-  },
-  description: SITE_DESCRIPTION,
-  alternates: {
-    canonical: "./",
-  },
-  // No title or description here on purpose: naming them would freeze the
-  // root's pair onto every page's card. Left out, each page's own title and
-  // description fill them in.
-  openGraph: {
-    type: "website",
-    siteName: "DayOS",
-    url: "./",
-  },
-  twitter: {
-    card: "summary_large_image",
-  },
-};
+/**
+ * The site's root layout, one level down from where a root layout usually
+ * sits: everything readable is under a language, so the `<html>` element is
+ * too — it is the element that has to carry `lang`, and there is nothing
+ * sensible to put there before the language is known.
+ *
+ * The default language keeps the unprefixed paths, which `next.config.js`
+ * rewrites onto this segment. `/en/docs` therefore also resolves, and every
+ * page names its unprefixed twin as canonical so that the pair is one page
+ * rather than two.
+ */
 
-export default function RootLayout({
+type Params = { params: Promise<{ lang: string }> };
+
+/** Both languages, and only both: `dynamicParams` closes the segment. */
+export function generateStaticParams() {
+  return LOCALES.map((lang) => ({ lang }));
+}
+
+export const dynamicParams = false;
+
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const lang = toLocale((await params).lang);
+
+  return {
+    // Without this the relative URLs below stay relative, and a link shared
+    // anywhere off the site loses its card.
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: SITE_TITLE[lang],
+      template: "%s",
+    },
+    description: SITE_DESCRIPTION[lang],
+    alternates: {
+      canonical: localePath(lang, "/"),
+      // Every language's copy of this page, so a search engine can offer the
+      // reader the one they asked for instead of picking.
+      languages: languageAlternates("/"),
+    },
+    // No title or description here on purpose: naming them would freeze the
+    // root's pair onto every page's card. Left out, each page's own title and
+    // description fill them in.
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      url: localePath(lang, "/"),
+      locale: OG_LOCALES[lang],
+    },
+    twitter: {
+      card: "summary_large_image",
+    },
+  };
+}
+
+export default async function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  params,
+}: Readonly<{ children: React.ReactNode }> & Params) {
+  const lang = toLocale((await params).lang);
+  const d = dictionary(lang);
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/*
-          Before the first paint, so a reader who chose dark never sees the page
-          in light first. `suppressHydrationWarning` on the <html> is the price:
-          this script writes an attribute React did not render.
-        */}
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant string, and it has to run before paint */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-      </head>
+    <html lang={lang} suppressHydrationWarning>
       <body>
-        <a className="skip-link" href="#doc-article">
-          Skip to content
-        </a>
-        <TopNav />
-        {children}
+        <ThemeProvider>
+          <LocaleProvider locale={lang}>
+            <a className="skip-link" href="#doc-article">
+              {d.skipToContent}
+            </a>
+            <TopNav lang={lang} />
+            {children}
+          </LocaleProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
