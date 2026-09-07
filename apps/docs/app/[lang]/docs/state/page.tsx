@@ -7,9 +7,10 @@ import Es from "./es.mdx";
 /**
  * /docs/state
  *
- * The prose is the two files next to this one. Everything else about the page —
- * its title, its place in the sidebar, the pages either side of it — is its
- * entry in `app/_lib/nav.ts`.
+ * The page is the two files next to this one: each opens with its own title
+ * and description, and carries the prose under them. All this route adds is
+ * which of the two the reader asked for. Where the page sits among the others
+ * — its section, and the pages either side of it — is `app/_lib/nav.ts`.
  */
 const HREF = "/docs/state";
 

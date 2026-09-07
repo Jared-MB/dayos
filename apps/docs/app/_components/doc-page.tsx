@@ -2,21 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { dictionary } from "../_lib/dictionary";
+import { findPage, sectionOf, siblings } from "../_lib/docs";
 import { type Locale, languageAlternates, localePath } from "../_lib/i18n";
-import {
-  findPage,
-  markdownHref,
-  pageHref,
-  sectionOf,
-  siblings,
-} from "../_lib/nav";
+import { markdownHref, pageHref } from "../_lib/nav";
 import { CopyPage } from "./copy-page";
 
 /**
  * The frame around a page's prose: breadcrumb, title, description and the
- * previous/next footer. All four come from `nav.ts`, so a page writes its
- * content and nothing else — and its title can't end up saying one thing in the
- * sidebar and another above the text.
+ * previous/next footer.
+ *
+ * The title and description are the page's own front matter, read back out of
+ * the same `.mdx` the prose comes from — so the file a writer opens holds
+ * everything that ends up on the screen, and the heading above the text cannot
+ * end up saying something different from the link in the sidebar. Only the
+ * breadcrumb and the footer come from elsewhere, because neither is about this
+ * page: they are where it sits among the others.
  *
  * The prose is passed in rather than looked up. A route imports the two `.mdx`
  * files sitting beside it and hands over the one the reader asked for, which
@@ -38,7 +38,7 @@ export function DocPage({
 
   if (!page) {
     throw new Error(
-      `DayOS docs: no page registered for ${JSON.stringify(href)} in ${lang}. Add it to the ${lang.toUpperCase()} sections in app/_lib/nav.ts.`,
+      `DayOS docs: no page registered for ${JSON.stringify(href)}. Add it to the outline in app/_lib/nav.ts.`,
     );
   }
 
@@ -91,8 +91,8 @@ export function DocPage({
 }
 
 /**
- * The page's `metadata`, from the same entry that titles it. Exported by every
- * route so the tab, the search result and the heading say the same thing.
+ * The page's `metadata`, from the same front matter that titles it. Exported by
+ * every route so the tab, the search result and the heading say the same thing.
  */
 export function docMetadata(lang: Locale, href: string): Metadata {
   const page = findPage(lang, href);

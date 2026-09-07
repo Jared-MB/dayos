@@ -6,43 +6,29 @@
  * handed a URL instead of a scrape of the rendered page — no navigation chrome,
  * no syntax-highlighting spans around every token of every example.
  *
- * Nothing here holds a second list of pages, and nothing imports the pages
- * either. `nav.ts` says which pages exist and what they are called; an href
- * says where its writing lives, because a page's route and its prose are the
- * same folder. Reading that file is all it takes to hand out the page.
+ * Nothing here holds a second copy of anything. `nav.ts` says which pages
+ * exist and in what order; each page's `.mdx` says what it is called and what
+ * it says, front matter and prose in the one file. So the Markdown a model is
+ * handed and the page a reader sees are two views of the same document, and
+ * neither can drift from the other.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { dictionary } from "./dictionary";
+import { readDocument, sectionOf, sections } from "./docs";
 import { LOCALE_NAMES, LOCALES, type Locale, localePath } from "./i18n";
 import { mdxToMarkdown } from "./mdx-markdown";
-import { findPage, HREFS, markdownUrl, sectionOf, sections } from "./nav";
+import { HREFS, markdownUrl } from "./nav";
 import { REPOSITORY, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./site";
 
 const absolute = (path: string) => new URL(path, SITE_URL).toString();
 
 /**
- * Where a page's prose is written: beside the `page.tsx` that renders it, named
- * for the language it is written in. `/docs/routing/matching` in Spanish is
- * `app/[lang]/docs/routing/matching/es.mdx`, and there is nowhere else to look.
- */
-export const sourcePath = (locale: Locale, href: string) =>
-  join(process.cwd(), "app", "[lang]", href, `${locale}.mdx`);
-
-/**
- * The Markdown for one page, or `undefined` if it has no entry in `nav.ts`.
- *
- * A page that is listed but has no `.mdx` beside its route throws rather than
- * going quiet: these run while the site is being built, so a translation
- * nobody has written yet is a failed build and not a blank page.
+ * The Markdown for one page, or `undefined` if the outline has no such page.
  */
 export function pageMarkdown(locale: Locale, href: string): string | undefined {
-  const page = findPage(locale, href);
+  if (!HREFS.includes(href)) return undefined;
 
-  if (!page) return undefined;
-
-  const source = readFileSync(sourcePath(locale, href), "utf8");
+  const { title, description, body } = readDocument(locale, href);
   const section = sectionOf(locale, href);
 
   // Front matter rather than a prose preamble: the title and description are
@@ -54,12 +40,10 @@ export function pageMarkdown(locale: Locale, href: string): string | undefined {
   // rather than the same document twice.
   const frontMatter = [
     "---",
-    `title: ${JSON.stringify(page.title)}`,
-    // A page whose entry has no description says nothing rather than saying
+    `title: ${JSON.stringify(title)}`,
+    // A page that gives no description says nothing rather than saying
     // "undefined": the key is optional, and an absent one is the honest shape.
-    ...(page.description
-      ? [`description: ${JSON.stringify(page.description)}`]
-      : []),
+    ...(description ? [`description: ${JSON.stringify(description)}`] : []),
     ...(section ? [`section: ${JSON.stringify(section.title)}`] : []),
     `language: ${JSON.stringify(locale)}`,
     `source: ${absolute(localePath(locale, href))}`,
@@ -68,9 +52,9 @@ export function pageMarkdown(locale: Locale, href: string): string | undefined {
 
   return [
     frontMatter,
-    `# ${page.title}`,
-    ...(page.description ? [page.description] : []),
-    mdxToMarkdown(source, locale),
+    `# ${title}`,
+    ...(description ? [description] : []),
+    mdxToMarkdown(body, locale),
   ]
     .join("\n\n")
     .concat("\n");

@@ -22,8 +22,9 @@ import { SITE_URL } from "./site";
 /** GitHub renders these as coloured alerts, and they read as prose everywhere else. */
 const ALERTS = { note: "NOTE", warning: "WARNING", good: "TIP" } as const;
 
-export function mdxToMarkdown(source: string, locale: Locale): string {
-  return blocks(source.split("\n"), locale).trimEnd();
+/** The prose only: the front matter has already been taken off by `docs.ts`. */
+export function mdxToMarkdown(body: string, locale: Locale): string {
+  return blocks(body.split("\n"), locale).trimEnd();
 }
 
 /**

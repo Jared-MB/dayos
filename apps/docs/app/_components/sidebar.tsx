@@ -3,18 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { pageHref, sections } from "../_lib/nav";
+import { type DocSection, pageHref } from "../_lib/nav";
 import { useDictionary, useLocale } from "./locale-provider";
 
 /**
  * The docs navigation. It is a client component for one reason: the current
  * page has to be marked, and only the browser knows which one that is.
  *
+ * The list arrives as a prop rather than being looked up here. Every title in
+ * it is read from the top of a page's `.mdx`, which only the server can do —
+ * and handing over the finished list means what crosses to the browser is a
+ * few dozen strings rather than the pages they came from.
+ *
  * On a narrow screen it becomes a drawer. The markup does not change between
  * the two — the same list, moved by CSS — so a link is never rendered twice and
  * the focus order stays what it looks like.
  */
-export function Sidebar() {
+export function Sidebar({ sections }: { sections: readonly DocSection[] }) {
   const locale = useLocale();
   const d = useDictionary();
   const pathname = usePathname();
@@ -75,7 +80,7 @@ export function Sidebar() {
         id="docs-sidebar"
       >
         <nav className="sidebar-nav">
-          {sections(locale).map((section) => (
+          {sections.map((section) => (
             <div className="sidebar-section" key={section.title}>
               <p className="sidebar-section-title">{section.title}</p>
               <ul className="sidebar-list">

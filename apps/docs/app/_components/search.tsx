@@ -2,14 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Locale } from "../_lib/i18n";
-import { type DocPage, pageHref, pages, sections } from "../_lib/nav";
+import { type DocPage, type DocSection, pageHref } from "../_lib/nav";
 import { useDictionary, useLocale } from "./locale-provider";
 
 /**
- * Search across the docs, over the same registry the sidebar renders. There are
- * a couple of dozen pages, so the whole index is a handful of strings and the
- * matching can happen on every keystroke without anyone noticing.
+ * Search across the docs, over the same list the sidebar renders — titles,
+ * descriptions and keywords, all of them written at the top of the page they
+ * belong to. There are a couple of dozen pages, so the whole index is a handful
+ * of strings and the matching can happen on every keystroke without anyone
+ * noticing.
  *
  * No index to build and no service to call: the tradeoff is that it searches
  * titles, descriptions and keywords rather than the body of each page. For a
@@ -17,12 +18,14 @@ import { useDictionary, useLocale } from "./locale-provider";
  * finding the paragraph it appears in, and the first is what the reader wants
  * from a jump-to-page box.
  */
-type Result = { page: DocPage; section: string; score: number };
+type Entry = { page: DocPage; section: string };
+type Result = Entry & { score: number };
 
-const sectionOf = (locale: Locale, href: string) =>
-  sections(locale).find((section) =>
-    section.pages.some((page) => page.href === href),
-  )?.title ?? "";
+/** Every page, each remembering the heading it was listed under. */
+const index = (sections: readonly DocSection[]): readonly Entry[] =>
+  sections.flatMap((section) =>
+    section.pages.map((page) => ({ page, section: section.title })),
+  );
 
 /**
  * How well a page answers a query. A hit in the title beats one in the
@@ -43,7 +46,7 @@ const score = (page: DocPage, query: string) => {
   return 0;
 };
 
-export function Search() {
+export function Search({ sections }: { sections: readonly DocSection[] }) {
   const locale = useLocale();
   const d = useDictionary();
   const [isOpen, setOpen] = useState(false);
@@ -55,29 +58,20 @@ export function Search() {
 
   const results = useMemo<Result[]>(() => {
     const trimmed = query.trim().toLowerCase();
+    const entries = index(sections);
 
     // With an empty box, offer the pages rather than nothing: opening the
     // palette and seeing the docs' shape is a reasonable way to use it.
     if (!trimmed) {
-      return pages(locale)
-        .slice(0, 8)
-        .map((page) => ({
-          page,
-          section: sectionOf(locale, page.href),
-          score: 0,
-        }));
+      return entries.slice(0, 8).map((entry) => ({ ...entry, score: 0 }));
     }
 
-    return pages(locale)
-      .map((page) => ({
-        page,
-        section: sectionOf(locale, page.href),
-        score: score(page, trimmed),
-      }))
+    return entries
+      .map((entry) => ({ ...entry, score: score(entry.page, trimmed) }))
       .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
-  }, [query, locale]);
+  }, [query, sections]);
 
   // The selection has to come back into range when the results change: typing
   // one more character can leave it pointing past the end of a shorter list.

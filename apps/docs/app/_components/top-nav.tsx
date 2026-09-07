@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { dictionary } from "../_lib/dictionary";
+import { sections } from "../_lib/docs";
 import { type Locale, localePath } from "../_lib/i18n";
 import { EXAMPLE_APP, REPOSITORY } from "../_lib/site";
 import { LanguageSwitcher } from "./language-switcher";
@@ -51,7 +52,7 @@ export function TopNav({ lang }: { lang: Locale }) {
         </nav>
 
         <div className="top-nav-right">
-          <Search />
+          <Search sections={sections(lang)} />
           <LanguageSwitcher />
           <a
             aria-label={d.nav.github}

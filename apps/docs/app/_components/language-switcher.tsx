@@ -16,8 +16,8 @@ import { useDictionary, useLocale } from "./locale-provider";
  *
  * A reader switching language wants the page they are on in the other
  * language, not the index — so the current path is stripped of its prefix and
- * handed back with a different one. Because the two lists in `nav.ts` hold the
- * same hrefs in the same order, that page always exists.
+ * handed back with a different one. Because `nav.ts` lists every page once for
+ * all the languages rather than once per language, that page always exists.
  *
  * Links and not a `<select>` or a popup: with a handful of languages there is
  * nothing to hide behind a disclosure, and a link can be opened in a new tab,
