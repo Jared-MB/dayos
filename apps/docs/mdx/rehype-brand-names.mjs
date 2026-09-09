@@ -41,7 +41,7 @@ export default function rehypeBrandNames() {
   return (tree) => visit(tree, tree);
 }
 
-function visit(node, parent) {
+function visit(node, _parent) {
   if (!node || typeof node !== "object") return;
 
   const name = elementName(node);
@@ -136,8 +136,7 @@ function isMarked(node) {
 
   return Boolean(
     node.attributes?.some(
-      (attribute) =>
-        attribute.name === "translate" && attribute.value === "no",
+      (attribute) => attribute.name === "translate" && attribute.value === "no",
     ),
   );
 }
