@@ -61,6 +61,7 @@ const withMDX = createMDX({
     remarkPlugins: ["remark-frontmatter"],
     rehypePlugins: [
       [fileURLToPath(new URL("mdx/rehype-code-meta.mjs", import.meta.url)), {}],
+      [fileURLToPath(new URL("mdx/rehype-brand-names.mjs", import.meta.url)), {}],
     ],
   },
 });

@@ -45,7 +45,11 @@ export function CodeBlock({
         <CopyButton className="code-copy-floating" text={code} />
       )}
 
-      <pre className="code-pre">
+      {/*
+        Source, so it is read and not translated: a browser asked to translate
+        the page would otherwise rewrite the identifiers inside it.
+      */}
+      <pre className="code-pre" translate="no">
         {/*
           A diff lays its lines out as grid rows, which is what the stylesheet
           keys off. The line break between rows is the grid's doing, so the
@@ -131,5 +135,9 @@ function fenceText(children: ReactNode): string {
 
 /** Inline code with a language, for the odd `<Window keepMounted />` in prose. */
 export function InlineCode({ children }: { children: string }) {
-  return <code className="inline-code">{children}</code>;
+  return (
+    <code className="inline-code" translate="no">
+      {children}
+    </code>
+  );
 }

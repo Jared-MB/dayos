@@ -94,7 +94,8 @@ export type PropProps = {
 export function Prop({ name, type, default: value, children }: PropProps) {
   return (
     <div className="prop-row">
-      <div className="prop-signature">
+      {/* A name, a type and a literal: identifiers, not prose to translate. */}
+      <div className="prop-signature" translate="no">
         <code className="prop-name">{name}</code>
         <code className="prop-type">{type}</code>
         {value ? <DefaultValue value={value} /> : null}
