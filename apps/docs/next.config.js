@@ -65,4 +65,14 @@ const withMDX = createMDX({
   },
 });
 
-export default withMDX(nextConfig);
+/**
+ * Annotated rather than inferred. `withMDX` comes from `@next/mdx`, which
+ * resolves `next` in its own tree, so the type it returns is only nameable
+ * through a path into `.pnpm` — which is what TS2742 objects to. Saying what
+ * the type is, out of this package's own `next`, is what makes it portable.
+ *
+ * @type {import("next").NextConfig}
+ */
+const config = withMDX(nextConfig);
+
+export default config;
