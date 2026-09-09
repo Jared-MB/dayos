@@ -1654,3 +1654,8 @@ h3:hover > .heading-anchor,
   place-items: center;
   background: transparent;
 }
+
+kbd {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 600;
+}
