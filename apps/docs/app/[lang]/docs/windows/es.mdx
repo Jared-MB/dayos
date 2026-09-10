@@ -1,0 +1,180 @@
+---
+title: Ventanas
+keywords: Window, WindowHeader, WindowContent, redimensionar, arrastrar,
+  maximizar, keepMounted
+---
+
+Una ventana es un marco que puedes arrastrar, redimensionar y maximizar. Aquí
+es donde se renderiza tu aplicación.
+
+## Composición
+
+```tsx
+<Window className="window">
+  <WindowHeader className="window-header">
+    <WindowName className="window-title">Notas</WindowName>
+    <WindowActions className="window-actions">
+      <WindowExpand className="window-button">▢</WindowExpand>
+      <WindowClose className="window-button">✕</WindowClose>
+    </WindowActions>
+  </WindowHeader>
+  <WindowContent className="window-content">Hola</WindowContent>
+</Window>
+```
+
+- `Window` — el marco donde se monta la aplicación.
+- `WindowHeader` — la barra de título, que es también el tirador de arrastre.
+- `WindowName` — el título. Es el nombre con el que se anuncia la ventana.
+- `WindowContent` — el contenido.
+- `WindowActions` — el grupo de controles.
+- `WindowExpand`, `WindowClose` — maximizar/restaurar y cerrar.
+
+Solo `Window` es obligatorio. Sin cabecera, la ventana no se puede arrastrar,
+pero sí se puede redimensionar y cerrar.
+
+## Geometría
+
+Por defecto una ventana ocupa el 70% del escritorio, centrada, y cada ventana
+adicional se desplaza 32 px respecto a la anterior para que se vea toda la
+pila a la vez. La cascada da la vuelta al llegar al borde en lugar de salirse de
+la pantalla.
+
+```tsx
+<Window
+  defaultSize={{ width: 520, height: 460 }}
+  defaultPosition={{ x: 220, y: 140 }}
+/>
+```
+
+Ambos van en píxeles y son solo los valores iniciales; pasar un
+`defaultPosition` saca a la ventana de la cascada por defecto.
+
+```tsx
+<Window cascadeOffset={48} minWidth={320} minHeight={200} />
+```
+
+`minWidth` y `minHeight` valen 240 y 120 por defecto y son el suelo al
+redimensionar.
+
+<Callout>
+  La geometría se lee una sola vez, cuando la ventana se monta por primera vez.
+  Cambiar `defaultSize` después no cambia el tamaño de una ventana que ya está
+  abierta — eso es lo que hace la palabra _default_. Los cambios de tamaño del
+  escritorio se tratan aparte: una ventana que ya no cabe se vuelve a ajustar
+  dentro del escritorio.
+</Callout>
+
+### Calcular dónde va a caer una ventana
+
+El cálculo de la posición se exporta como `windowRect`, la misma función que usa
+la propia ventana. Es pura, así que puedes llamarla por tu cuenta si necesitas
+predecir una posición — para una animación de minimizado, por ejemplo, o para
+persistir la geometría.
+
+```tsx
+import { windowRect } from "@dayos/core";
+
+const rect = windowRect({
+  desktopWidth: 1280,
+  desktopHeight: 800,
+  defaultSize: { width: 520, height: 460 },
+  cascadeStep: 2,
+});
+// { width: 520, height: 460, x: 444, y: 234 }
+```
+
+## Arrastrar y redimensionar
+
+La cabecera es el tirador de arrastre. El redimensionado funciona desde
+cualquier borde o esquina. Los dos están acotados por el escritorio, y los dos
+traen la ventana al frente cuando empiezan.
+
+### Elementos que no inician un arrastre
+
+Los botones, enlaces y controles de formulario de la cabecera quedan excluidos
+del arrastre por defecto:
+
+```tsx
+dragCancel = "button, a, input, select, textarea"
+```
+
+Sin esto, pulsar el botón de restaurar además empezaría un arrastre, y la
+ventana acabaría siguiendo al cursor en lugar de volver a su posición guardada.
+Pasa tu propio selector para ampliarlo:
+
+```tsx
+<Window dragCancel="button, a, input, select, textarea, .no-drag" />
+```
+
+### Maximizar
+
+`WindowExpand` alterna entre llenar el escritorio y volver a donde estaba la
+ventana. La geometría anterior se guarda y se vuelve a acotar al restaurarla, ya
+que el escritorio puede haber encogido mientras tanto.
+
+Arrastrar una ventana maximizada la restaura y la engancha al cursor,
+manteniendo el puntero sobre el mismo punto proporcional de la barra de título —
+el gesto que tienen todos los escritorios.
+
+Mientras está maximizada, tanto la ventana como su cabecera llevan
+`data-maximized`; con esto puedes cambiar los estilos según el estado de la
+ventana:
+
+```css
+.window-header[data-maximized] {
+  background-color: red;
+}
+```
+
+O con Tailwind, en la propia cabecera:
+
+```tsx
+<WindowHeader className="data-maximized:bg-red-500">
+```
+
+## Mantener el estado mientras está cerrada
+
+Cerrar una ventana desmonta su subárbol, y todo lo que hay dentro se va: la
+posición del scroll, los campos del formulario, el punto de reproducción de un
+vídeo. `keepMounted` la mantiene en el árbol y la oculta en su lugar.
+
+```tsx
+<Window keepMounted>
+  <WindowContent>
+    <textarea />
+  </WindowContent>
+</Window>
+```
+
+<Callout type="warning">
+  En una ventana con `keepMounted` los temporizadores siguen en marcha, las
+  consultas siguen refrescándose, y un vídeo sigue reproduciéndose salvo que
+  algo lo pause.
+</Callout>
+
+## Cerrar
+
+<kbd>Escape</kbd> cierra la ventana enfocada salvo que lo desactives:
+
+```tsx
+<Window closeOnEscape={false} />
+```
+
+Un manejador tuyo que llame a `preventDefault()` también lo detiene: así es como
+una ventana con cambios sin guardar pide confirmación antes.
+
+## Foco y apilado
+
+Pulsar en cualquier punto de una ventana la trae al frente, y también lo hace
+enfocar cualquier cosa dentro de ella, incluido con <kbd>Tab</kbd>. El orden de
+apilado es la lista `openWindows` del escritorio, y el `z-index` sale de la
+posición de la ventana en ella.
+
+Las ventanas no son modales, y se anuncian como lo que son. Varias conviven y
+el resto del escritorio sigue siendo alcanzable, así que cada una es un
+`role="dialog"` con `aria-modal="false"`, etiquetada por su `WindowName`.
+
+<Callout title="Dale un WindowName a cada ventana">
+  De ahí sale el nombre accesible del diálogo. Una ventana sin él se anuncia como
+  un diálogo sin nombre, que en un escritorio lleno de ellos no es ningún nombre.
+</Callout>

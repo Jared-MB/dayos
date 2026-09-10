@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useDictionary } from "./locale-provider";
 
 /**
  * The one interactive part of a code block. It lives in its own client
@@ -13,6 +14,7 @@ export function CopyButton({
   text: string;
   className?: string;
 }) {
+  const d = useDictionary();
   const [copied, setCopied] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -36,7 +38,7 @@ export function CopyButton({
 
   return (
     <button
-      aria-label={copied ? "Copied" : "Copy code"}
+      aria-label={copied ? d.code.copied : d.code.copy}
       className={["copy-button", className].filter(Boolean).join(" ")}
       data-copied={copied ? "" : undefined}
       onClick={copy}

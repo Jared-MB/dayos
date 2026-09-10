@@ -1,0 +1,177 @@
+---
+title: Windows
+description: "The window frame: geometry, dragging, resizing, maximizing and the
+  parts it is built from."
+keywords: Window, WindowHeader, WindowContent, resize, drag, maximize,
+  keepMounted
+---
+
+A window is a frame you can drag, resize and maximize. It is assembled from
+parts rather than configured through props, so a title bar with three buttons
+and a title bar with none are the same component with different children.
+
+## The parts
+
+```tsx
+<Window className="window">
+  <WindowHeader className="window-header">
+    <WindowName className="window-title">Notes</WindowName>
+    <WindowActions className="window-actions">
+      <WindowExpand className="window-button">▢</WindowExpand>
+      <WindowClose className="window-button">✕</WindowClose>
+    </WindowActions>
+  </WindowHeader>
+  <WindowContent className="window-content">Hello</WindowContent>
+</Window>
+```
+
+- `Window` — the frame. Portals into the desktop once it is mounted.
+- `WindowHeader` — the title bar, which is also the drag handle.
+- `WindowName` — the title. It is what the window is announced as.
+- `WindowContent` — the body, which scrolls.
+- `WindowActions` — the control group, and `WindowAction` a generic button to
+  put in it.
+- `WindowExpand`, `WindowClose` — maximize/restore and close.
+
+Only `Window` is required. Without a header the window cannot be dragged, but it
+can still be resized and closed.
+
+## Geometry
+
+By default a window is 70% of the desktop, centred, and each additional window
+is offset 32px from the last so a stack of them is visible at once. The cascade
+wraps around when it reaches the edge instead of marching off screen.
+
+```tsx
+<Window
+  defaultSize={{ width: 520, height: 460 }}
+  defaultPosition={{ x: 220, y: 140 }}
+/>
+```
+
+Both are in pixels, both are initial values only, and a `defaultPosition` opts
+out of the cascade — the window goes exactly where you said. A size larger than
+the desktop is clamped to it.
+
+```tsx
+<Window cascadeOffset={48} minWidth={320} minHeight={200} />
+```
+
+`minWidth` and `minHeight` default to 240 and 120 and are the floor for
+resizing.
+
+<Callout>
+  Geometry is read once, when the window first mounts. Changing `defaultSize`
+  later does not move a window that is already open — that is what the word
+  _default_ is doing. Desktop resizes are handled separately: a window that no
+  longer fits is clamped back inside.
+</Callout>
+
+### Working out where a window will land
+
+The placement maths is exported as `windowRect`, the same function the window
+itself uses. It is pure, so it is available if you need to predict a position —
+for a minimize animation, say, or to persist geometry.
+
+```tsx
+import { windowRect } from "@dayos/core";
+
+const rect = windowRect({
+  desktopWidth: 1280,
+  desktopHeight: 800,
+  defaultSize: { width: 520, height: 460 },
+  cascadeStep: 2,
+});
+// { width: 520, height: 460, x: 444, y: 234 }
+```
+
+## Dragging and resizing
+
+The header is the drag handle. Resizing works from any edge or corner. Both are
+bounded by the desktop, and both bring the window to the front when they start.
+
+### Elements that do not start a drag
+
+Buttons, links and form controls in the header are excluded from dragging by
+default:
+
+```tsx
+dragCancel = "button, a, input, select, textarea"
+```
+
+Without this, clicking the restore button would also begin a drag, and the
+window would end up following the cursor instead of returning to its saved
+position. Pass your own selector to widen it:
+
+```tsx
+<Window dragCancel="button, a, input, select, textarea, .no-drag" />
+```
+
+### Maximizing
+
+`WindowExpand` toggles between filling the desktop and going back to where the
+window was. The geometry from before is kept and re-clamped on the way back,
+since the desktop may have shrunk in the meantime.
+
+Dragging a maximized window restores it and hooks it to the cursor, keeping the
+pointer over the same proportional point of the title bar — the gesture every
+desktop has.
+
+While maximized, both the window and its header carry `data-maximized`, which is
+how you square off a rounded header:
+
+```css
+.window-header[data-maximized] {
+  border-radius: 0;
+}
+```
+
+## Keeping state while closed
+
+Closing a window unmounts its subtree, and everything in it goes: scroll
+position, form fields, a video’s playback position. `keepMounted` keeps it in
+the tree and hides it instead.
+
+```tsx
+<Window keepMounted>
+  <WindowContent>
+    <textarea />
+  </WindowContent>
+</Window>
+```
+
+It is lazy about it: the window mounts the first time it opens, not before. Apps
+that are never opened cost nothing.
+
+<Callout type="warning">
+  A kept-mounted window is still mounted. Timers keep running, queries keep
+  refetching, and a video keeps playing unless something pauses it. That is the
+  point of the prop, but it is worth knowing which of your windows have it.
+</Callout>
+
+## Closing
+
+`Escape` closes the focused window unless you turn it off:
+
+```tsx
+<Window closeOnEscape={false} />
+```
+
+A handler of your own that calls `preventDefault()` also stops it, which is how
+a window with unsaved changes asks first.
+
+## Focus and stacking
+
+Clicking anywhere in a window brings it to the front, and so does focusing
+anything inside it — including via <kbd>Tab</kbd>. The stacking order is the
+desktop’s `openWindows` list, and the `z-index` comes from a window’s position
+in it.
+
+Windows are not modal, and they are announced that way. Several coexist and the
+rest of the desktop stays reachable, so each is a `role="dialog"` with
+`aria-modal="false"`, labelled by its `WindowName`.
+
+<Callout title="Give every window a WindowName">
+  The dialog’s accessible name comes from it. A window without one is announced
+  as an unnamed dialog, which in a desktop full of them is no name at all.
+</Callout>

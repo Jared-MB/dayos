@@ -1,28 +1,41 @@
 import Link from "next/link";
+import { dictionary } from "../_lib/dictionary";
+import { sections } from "../_lib/docs";
+import { type Locale, localePath } from "../_lib/i18n";
 import { EXAMPLE_APP, REPOSITORY } from "../_lib/site";
+import { LanguageSwitcher } from "./language-switcher";
 import { Search } from "./search";
 import { ThemeToggle } from "./theme-toggle";
 
-const VERSION = "0.2.2";
+const VERSION = "0.2.3";
 
-export function TopNav() {
+export function TopNav({ lang }: { lang: Locale }) {
+  const d = dictionary(lang);
+
   return (
     <header className="top-nav">
       <div className="top-nav-inner">
         <div className="top-nav-left">
-          <Link aria-label="DayOS home" className="wordmark" href="/">
+          <Link
+            aria-label={d.nav.homeLabel}
+            className="wordmark"
+            href={localePath(lang, "/")}
+          >
             <WindowsMark />
             <span className="wordmark-text">DayOS</span>
           </Link>
           <span className="version-badge">v{VERSION}</span>
         </div>
 
-        <nav aria-label="Main" className="top-nav-links">
-          <Link className="top-nav-link" href="/docs">
-            Docs
+        <nav aria-label={d.nav.mainLabel} className="top-nav-links">
+          <Link className="top-nav-link" href={localePath(lang, "/docs")}>
+            {d.nav.docs}
           </Link>
-          <Link className="top-nav-link" href="/docs/api/core">
-            API
+          <Link
+            className="top-nav-link"
+            href={localePath(lang, "/docs/api/core")}
+          >
+            {d.nav.api}
           </Link>
           {/*
             The demo is not deployed anywhere, so this goes to its source
@@ -34,14 +47,15 @@ export function TopNav() {
             rel="noreferrer"
             target="_blank"
           >
-            Example
+            {d.nav.example}
           </a>
         </nav>
 
         <div className="top-nav-right">
-          <Search />
+          <Search sections={sections(lang)} />
+          <LanguageSwitcher />
           <a
-            aria-label="DayOS on GitHub"
+            aria-label={d.nav.github}
             className="icon-button"
             href={REPOSITORY}
             rel="noreferrer"

@@ -1,0 +1,190 @@
+---
+title: Rutas dinámicas
+description: Una sola declaración que vale por una ventana por documento, tarea
+  o registro.
+keywords: patrón, params, useDynamicWindows, slug, :file, dinámicas
+---
+
+Una ruta estática es una ventana. Un patrón vale por tantas ventanas como URL se
+visiten — una por documento, tarea o registro — lo que significa que no se puede
+renderizar a partir de una lista como sí se puede con una ruta estática. Para
+eso hay un hook.
+
+## Declarar un patrón
+
+Un segmento escrito `:asi` coincide con cualquier cosa. Los patrones van en el
+mismo array `routes` que todo lo demás:
+
+```tsx title="app/shell.tsx"
+const ROUTES = [
+  "/",
+  "/documents",
+  "/documents/:file",
+] as const;
+```
+
+<Callout>
+  Esta es la sintaxis propia de DayOS y no tiene nada que ver con los nombres de
+  carpeta de Next. Next sigue queriendo `app/documents/[file]/page.tsx` en disco;
+  la forma con dos puntos es cómo se le dice al escritorio que esta ruta
+  significa muchas ventanas.
+</Callout>
+
+## Renderizar una app por ventana abierta
+
+`useDynamicWindows` devuelve las ventanas que un patrón tiene abiertas en ese
+momento, con los params a los que se resolvió cada una:
+
+```tsx title="app/shell.tsx"
+import { useDynamicWindows, type RouteParams } from "@dayos/next";
+
+function DocumentApps() {
+  const windows = useDynamicWindows("/documents/:file");
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell title={params.file} />
+    </DesktopApp>
+  ));
+}
+```
+
+La lista sale de las ventanas abiertas del escritorio, no de un estado tuyo. El
+escritorio ya sabe qué documentos están abiertos, y una segunda copia de eso
+sería una cosa más que mantener en sincronía.
+
+### Por qué vienen los params
+
+La coincidencia ya averiguó qué representaba `:file`. Si no se devolvieran, cada
+consumidor tendría que despiezar el href otra vez para recuperar lo que el
+patrón acababa de decirle. Llegan decodificados, como los params de una página
+de Next, así que la ventana recibe el nombre de la cosa y no su forma escrita en
+la URL.
+
+```tsx
+function DocumentApps() {
+  const windows = useDynamicWindows("/documents/:file");
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell title={findDocument(params.file)?.name ?? params.file} />
+    </DesktopApp>
+  ));
+}
+```
+
+## Ventanas sin icono
+
+Un documento o una tarea no tienen un sitio fijo en el escritorio: se abren
+desde la lista que los contiene, y cerrar su ventana es el final de la historia.
+Así que la app de una instancia de un patrón normalmente renderiza una ventana y
+nada más.
+
+```tsx
+function DocumentShell({ title }: { title: string }) {
+  const content = useWindowRoute();
+
+  return (
+    <Window
+      className="window"
+      defaultPosition={{ x: 220, y: 140 }}
+      defaultSize={{ width: 520, height: 460 }}
+      keepMounted
+    >
+      <WindowHeader className="window-header">
+        <WindowName className="window-title">{title}</WindowName>
+        <WindowActions className="window-actions">
+          <WindowExpand className="window-button">▢</WindowExpand>
+          <WindowClose className="window-button">✕</WindowClose>
+        </WindowActions>
+      </WindowHeader>
+      <WindowContent className="window-content">{content}</WindowContent>
+    </Window>
+  );
+}
+```
+
+## Abrir una
+
+Nada especial. El href de la ventana es la URL, así que un `Link` la abre, y
+nada en tu código lleva una lista de qué documentos se han visitado:
+
+```tsx title="app/documents/page.tsx"
+export default function DocumentsPage() {
+  return (
+    <ul>
+      {DOCUMENTS.map(({ file, name }) => (
+        <li key={file}>
+          <Link href={`/documents/${file}`}>{name}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Abrir un documento deja en paz a la ventana de la lista. La lista se queda en su
+propia página mientras el documento consigue una ventana propia a su lado — que
+es el comportamiento que tendrías que construir a mano en una interfaz de
+pestañas.
+
+## Anidamiento
+
+Los patrones se anidan tan profundo como quieras, y cada nivel es una
+declaración aparte:
+
+```tsx
+const ROUTES = [
+  "/projects",
+  "/projects/archive",
+  "/projects/:project",
+  "/projects/:project/new",
+  "/projects/:project/:task",
+] as const;
+```
+
+Escalona la geometría para que abrir una tras otra las deje todas visibles a la
+vez:
+
+```tsx
+<PatternApps
+  defaultPosition={{ x: 180, y: 120 }}
+  pattern="/projects/:project"
+/>
+<PatternApps
+  defaultPosition={{ x: 300, y: 240 }}
+  pattern="/projects/:project/:task"
+/>
+```
+
+<Callout
+  type="warning"
+  title="Un patrón con un último segmento literal sigue siendo un patrón"
+>
+  `/projects/:project/new` acaba en un literal, pero sigue teniendo un param —
+  así que es una ventana por proyecto en lugar de una sola ventana, y va con los
+  patrones y no en la lista de rutas estáticas.
+</Callout>
+
+## Partir la lista
+
+Las rutas estáticas se renderizan una a una; los patrones se renderizan por
+instancia. Derivar la primera lista de la segunda evita que se separen:
+
+```tsx title="app/shell.tsx"
+const PATTERNS: readonly string[] = [
+  "/documents/:file",
+  "/projects/:project",
+  "/projects/:project/new",
+  "/projects/:project/:task",
+];
+
+const STATIC_ROUTES = ROUTES.filter((route) => !PATTERNS.includes(route));
+```
+
+## Lo que un patrón no reclama
+
+Del hook solo vuelven las ventanas que el patrón posee. Declarar
+`/documents/new` junto a `/documents/:file` deja esa fuera de la lista: su
+ventana pertenece a la ruta concreta, no al patrón. Qué ruta gana es la
+[coincidencia de rutas](/es/docs/routing/matching).

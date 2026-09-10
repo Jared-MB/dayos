@@ -1,0 +1,151 @@
+---
+title: Controlling State
+description: Open windows uncontrolled, or drive them from outside for
+  persistence, a dock or shortcuts.
+keywords: controlled, uncontrolled, openWindows, defaultOpen, useDesktop
+---
+
+Which windows are open is one list, held by `Desktop`. Left alone it manages
+itself. Handed a value and a callback, it becomes yours — which is how window
+state gets persisted, restored, or driven from a dock or a keyboard shortcut.
+
+## Uncontrolled
+
+The default. The desktop keeps its own list, and `defaultOpenWindows` seeds it:
+
+```tsx
+<Desktop defaultOpenWindows={["notes"]}>
+  <App id="notes" />
+  <App id="about" />
+</Desktop>
+```
+
+The order is the stacking order: the last id is the window in front.
+
+## Controlled
+
+Pass `openWindows` and `onOpenWindowsChange` and the desktop stops holding
+state. Every open, close and focus goes through you:
+
+```tsx
+function Workspace() {
+  const [openWindows, setOpenWindows] = useState<string[]>([]);
+
+  return (
+    <Desktop
+      className="desktop"
+      onOpenWindowsChange={setOpenWindows}
+      openWindows={openWindows}
+    >
+      <App id="notes" />
+      <App id="about" />
+    </Desktop>
+  );
+}
+```
+
+<Callout type="warning">
+  Controlled means controlled. If `onOpenWindowsChange` does not lead to a new
+  `openWindows`, nothing opens and nothing closes — the close button will appear
+  broken.
+</Callout>
+
+### Persisting a session
+
+The list is an array of strings, so it survives a round trip through storage
+without any ceremony:
+
+```tsx
+const STORAGE_KEY = "workspace";
+
+function Workspace() {
+  const [openWindows, setOpenWindows] = useState<string[]>([]);
+
+  // After mount, never during render: the server has no access to storage, and
+  // reading it while rendering is a hydration mismatch.
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) setOpenWindows(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(openWindows));
+  }, [openWindows]);
+
+  return (
+    <Desktop onOpenWindowsChange={setOpenWindows} openWindows={openWindows}>
+      {/* ... */}
+    </Desktop>
+  );
+}
+```
+
+## Per window
+
+`DesktopApp` takes the same pair for a single window, which is often all you
+need:
+
+```tsx
+<DesktopApp defaultOpen id="notes">
+  {/* opens on mount, and is left alone after that */}
+</DesktopApp>
+```
+
+```tsx
+<DesktopApp
+  id="settings"
+  onOpenChange={setSettingsOpen}
+  open={isSettingsOpen}
+>
+  {/* stays in sync with your state, in both directions */}
+</DesktopApp>
+```
+
+`onOpenChange` fires wherever the change came from — the icon, the close button,
+<kbd>Escape</kbd>, a route, another window’s button. It watches the state rather
+than wrapping any one control, so there is no path that skips it.
+
+<Callout title="defaultOpen only seeds the client">
+  It runs in an effect, so a window opened this way does not exist in the server
+  HTML. To have a window come open from the server, list it in the desktop’s
+  `defaultOpenWindows` instead — that is state the parent owns, and it is
+  decided during render.
+</Callout>
+
+## Driving the desktop from outside
+
+`useDesktop` works anywhere inside `Desktop`, so controls do not have to live in
+a window:
+
+```tsx
+function Shortcuts() {
+  const { openWindow, closeWindow, activeWindowId } = useDesktop();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "w" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        if (activeWindowId) closeWindow(activeWindowId);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [activeWindowId, closeWindow]);
+
+  return null;
+}
+```
+
+### The operations
+
+- `openWindow(id)` — opens it, or brings it to the front if it is already open.
+- `closeWindow(id)` — closes it. A no-op if it was not open.
+- `focusWindow(id)` — brings it to the front without opening it. Focusing the
+  window that is already in front changes nothing and re-renders nothing.
+
+## With routing
+
+`RoutedDesktop` is a controlled desktop whose controller is the URL, which is
+why it does not accept the window-state props: the provider owns them. Read the
+state with `useDesktop` as usual, and change it by navigating.

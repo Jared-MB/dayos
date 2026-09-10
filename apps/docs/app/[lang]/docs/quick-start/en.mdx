@@ -1,0 +1,269 @@
+---
+title: Quick Start
+description: Build a desktop with two windows, from an empty component to
+  something you can drag.
+keywords: tutorial, first desktop, example, getting started
+---
+
+This builds a desktop with two apps, from an empty component to something you
+can drag around. It uses `@dayos/core` alone — no routing, one page. Adding URLs
+comes later and does not change any of this.
+
+<Steps>
+
+<Step title="Install the core">
+
+```bash
+pnpm add @dayos/core
+```
+
+</Step>
+
+<Step title="Create the desktop">
+
+`Desktop` is the container. It owns which windows are open and their stacking
+order, and every other component has to be inside it.
+
+```tsx title="app/desktop.tsx"
+"use client";
+
+import { Desktop } from "@dayos/core";
+
+export function MyDesktop() {
+  return <Desktop className="desktop" />;
+}
+```
+
+It has no size of its own, so give it one. Without a height it collapses to
+nothing and clips away every window inside it.
+
+```css
+.desktop {
+  height: 100dvh;
+  background: linear-gradient(140deg, #1e3a5f, #0f172a 60%, #312e81);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 6rem);
+  align-content: start;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+```
+
+</Step>
+
+<Step title="Add an app">
+
+A `DesktopApp` is one icon plus one window, tied together by an `id`. The icon
+opens the window; the window is what opens.
+
+```tsx title="app/desktop.tsx"
+"use client";
+
+import {
+  Desktop,
+  DesktopApp,
+  DesktopIcon,
+  DesktopIconText,
+  Window,
+  WindowContent,
+  WindowHeader,
+  WindowName,
+} from "@dayos/core";
+
+export function MyDesktop() {
+  return (
+    <Desktop className="desktop">
+      <DesktopApp id="notes">
+        <DesktopIcon className="icon">
+          <span aria-hidden="true" className="icon-glyph">
+            ▣
+          </span>
+          <DesktopIconText>Notes</DesktopIconText>
+        </DesktopIcon>
+
+        <Window className="window">
+          <WindowHeader className="window-header">
+            <WindowName className="window-title">Notes</WindowName>
+          </WindowHeader>
+          <WindowContent className="window-content">
+            Double click the icon to open me.
+          </WindowContent>
+        </Window>
+      </DesktopApp>
+    </Desktop>
+  );
+}
+```
+
+Double clicking the icon opens the window, and so do <kbd>Enter</kbd> and
+<kbd>Space</kbd> when it has focus. The window is draggable by its header and
+resizable from its edges already.
+
+<Callout>
+  `WindowHeader` is the drag handle. A window without one can still be resized
+  and closed, but it cannot be moved.
+</Callout>
+
+</Step>
+
+<Step title="Give the window controls">
+
+`WindowActions` is the control group; `WindowExpand` maximizes and restores,
+`WindowClose` closes. Both come with the right accessible names, and
+`WindowExpand` announces which of its two jobs it is currently doing.
+
+```tsx title="app/desktop.tsx" added="4-7"
+<Window className="window">
+  <WindowHeader className="window-header">
+    <WindowName className="window-title">Notes</WindowName>
+    <WindowActions className="window-actions">
+      <WindowExpand className="window-button">▢</WindowExpand>
+      <WindowClose className="window-button">✕</WindowClose>
+    </WindowActions>
+  </WindowHeader>
+  <WindowContent className="window-content">
+    Double click the icon to open me.
+  </WindowContent>
+</Window>
+```
+
+</Step>
+
+<Step title="Add a second app">
+
+The second app is the same shape with a different `id`. Two apps sharing an id
+is a bug DayOS warns about in development: they would share window state and
+render the same window twice, stacked exactly on top of each other.
+
+```tsx title="app/desktop.tsx"
+<Desktop className="desktop">
+  <App id="notes" title="Notes">
+    Double click the icon to open me.
+  </App>
+  <App id="about" title="About">
+    Drag my header. Drag my edges. Try the maximize button.
+  </App>
+</Desktop>
+```
+
+Where `App` is the markup from the previous step, pulled into a component of
+your own:
+
+```tsx title="app/app.tsx"
+function App({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <DesktopApp id={id}>
+      <DesktopIcon className="icon">
+        <span aria-hidden="true" className="icon-glyph">
+          ▣
+        </span>
+        <DesktopIconText>{title}</DesktopIconText>
+      </DesktopIcon>
+
+      <Window className="window">
+        <WindowHeader className="window-header">
+          <WindowName className="window-title">{title}</WindowName>
+          <WindowActions className="window-actions">
+            <WindowExpand className="window-button">▢</WindowExpand>
+            <WindowClose className="window-button">✕</WindowClose>
+          </WindowActions>
+        </WindowHeader>
+        <WindowContent className="window-content">{children}</WindowContent>
+      </Window>
+    </DesktopApp>
+  );
+}
+```
+
+Open both. The one you click last comes to the front, and closing it leaves the
+other where it was.
+
+</Step>
+
+<Step title="Style it">
+
+Nothing above has any appearance yet beyond what the browser gives it. This is
+the stylesheet the demo app uses, and it is a starting point rather than a
+requirement:
+
+```css
+.icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: none;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  cursor: pointer;
+}
+
+.icon:hover,
+.icon:focus-visible {
+  background: rgb(255 255 255 / 0.15);
+  border-color: rgb(255 255 255 / 0.3);
+  outline: none;
+}
+
+.window {
+  border: 1px solid #d4d4d8;
+  border-radius: 0.75rem;
+  background: #f4f4f5;
+  box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.45);
+  overflow: hidden;
+}
+
+.window-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #d4d4d8;
+  background: #ffffff;
+  cursor: grab;
+}
+
+.window-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.window-content {
+  padding: 1rem 1.25rem;
+}
+```
+
+</Step>
+
+</Steps>
+
+## Where to go from here
+
+<Cards>
+  <Card href="/docs/windows" title="Windows">
+    Geometry, maximizing, and keeping a window mounted while it is closed.
+  </Card>
+  <Card href="/docs/routing" title="Windows with URLs">
+    Give each of these windows a route of its own.
+  </Card>
+  <Card
+    href="https://github.com/Jared-MB/dayos/tree/main/apps/examples/nextjs"
+    title="The example app"
+  >
+    A working desktop with static routes, dynamic ones and nesting.
+  </Card>
+</Cards>

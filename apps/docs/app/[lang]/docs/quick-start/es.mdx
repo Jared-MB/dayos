@@ -1,0 +1,248 @@
+---
+title: Inicio rápido
+description: Construye un escritorio con dos ventanas.
+keywords: tutorial, primer escritorio, ejemplo, empezar, getting started
+---
+
+Construye tu primer escritorio con DayOS.
+Este tutorial te guía paso a paso: al final tendrás un escritorio con dos ventanas que puedes abrir, cerrar, arrastrar y redimensionar.
+
+<Callout>
+  Partimos de un proyecto vacío de Next.js con Tailwind, pero puedes usar
+  cualquier framework compatible con React, como Vite, y CSS puro.
+</Callout>
+
+<Steps>
+
+<Step title="Instala el núcleo">
+
+```bash
+pnpm add @dayos/core@latest -E
+```
+
+</Step>
+
+<Step title="Crea el escritorio">
+
+`Desktop` es el contenedor principal. Gestiona qué ventanas están abiertas y en qué orden
+se apilan.
+
+```tsx title="app/page.tsx"
+import { Desktop } from "@dayos/core";
+
+export default function Page() {
+  return <Desktop/>;
+}
+```
+
+`<Desktop/>` no tiene tamaño propio, así que puedes hacer que ocupe
+toda la pantalla o solo una parte de ella.
+
+```tsx
+<Desktop className='h-dvh'/>
+```
+
+
+
+</Step>
+
+<Step title="Añade una app">
+
+Para crear una aplicación, añade un `DesktopApp` dentro del `Desktop`.
+Está compuesto por un `DesktopIcon`, que es lo que abre la ventana,
+y un `Window`, que es donde se renderiza la aplicación.
+
+```tsx title="app/page.tsx"
+import {
+  Desktop,
+  DesktopApp,
+  DesktopIcon,
+  DesktopIconText,
+  Window,
+  WindowContent,
+  WindowHeader,
+  WindowName,
+} from "@dayos/core";
+
+import { NotepadText } from "lucide-react";
+
+export default function Page() {
+  return (
+    <Desktop className="h-dvh p-4 flex gap-4">
+      <DesktopApp id="notes">
+        <DesktopIcon className="h-fit cursor-pointer border border-zinc-800 rounded-md flex flex-col items-center p-2 gap-1">
+          <NotepadText />
+          <DesktopIconText>Notas</DesktopIconText>
+        </DesktopIcon>
+        <Window className="bg-zinc-900 rounded-md border border-zinc-800">
+          <WindowHeader className="border-b border-b-zinc-800 p-4">
+            <WindowName>Notas</WindowName>
+          </WindowHeader>
+          <WindowContent className="p-4">Esta es una ventana</WindowContent>
+        </Window>
+      </DesktopApp>
+    </Desktop>
+  );
+}
+```
+
+`DesktopIcon` es completamente accesible: hacer doble clic en el icono abre la ventana,
+y también lo hacen <kbd>Enter</kbd> o <kbd>Espacio</kbd> cuando el icono tiene el foco.
+
+<Callout>
+  `WindowHeader` es el encargado del arrastre. Una ventana sin él se puede
+  redimensionar y cerrar igual, pero no se puede mover.
+</Callout>
+
+</Step>
+
+<Step title="Dale controles a la ventana">
+
+`WindowActions` es el grupo de controles: `WindowExpand` maximiza y restaura,
+y `WindowClose` cierra.
+
+```tsx title="app/page.tsx" added="4-11, 2"
+<Window className="bg-zinc-900 rounded-md border border-zinc-800">
+  <WindowHeader className="border-b border-b-zinc-800 p-4 flex justify-between items-center">
+    <WindowName>Notas</WindowName>
+    <WindowActions className="flex items-center gap-2">
+      <WindowExpand className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
+        ▢
+      </WindowExpand>
+      <WindowClose className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
+        ✕
+      </WindowClose>
+    </WindowActions>
+  </WindowHeader>
+  <WindowContent className="p-4">Esta es una ventana</WindowContent>
+</Window>
+```
+
+</Step>
+
+<Callout>
+Fíjate en que, aunque estamos usando Next.js, no hace falta ninguna directiva
+<span style={{whiteSpace: 'nowrap'}}>`"use client"`</span> ni instalar un adaptador.
+</Callout>
+
+<Step title="Reutiliza componentes">
+
+```tsx title="components/app.tsx"
+import {
+  DesktopApp,
+  DesktopIcon,
+  DesktopIconText,
+  Window,
+  WindowActions,
+  WindowClose,
+  WindowContent,
+  WindowExpand,
+  WindowHeader,
+  WindowName,
+} from "@dayos/core";
+
+import type { LucideIcon } from "lucide-react";
+
+interface Props {
+  icon: LucideIcon;
+  title: string;
+  id: string;
+  children?: React.ReactNode;
+}
+
+export function App({ children, ...props }: Props) {
+  return (
+    <DesktopApp id={props.id}>
+      <DesktopIcon className="h-fit cursor-pointer border border-zinc-800 rounded-md flex flex-col items-center p-2 gap-1">
+        <props.icon />
+        <DesktopIconText>{props.title}</DesktopIconText>
+      </DesktopIcon>
+      <Window className="bg-zinc-900 rounded-md border border-zinc-800">
+        <WindowHeader className="border-b border-b-zinc-800 p-4 flex justify-between items-center">
+          <WindowName>{props.title}</WindowName>
+          <WindowActions className="flex items-center gap-2">
+            <WindowExpand className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
+              ▢
+            </WindowExpand>
+            <WindowClose className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
+              ✕
+            </WindowClose>
+          </WindowActions>
+        </WindowHeader>
+        <WindowContent className="p-4">{children}</WindowContent>
+      </Window>
+    </DesktopApp>
+  );
+}
+```
+
+```tsx title="app/page.tsx" added="8-10"
+import { Desktop } from "@dayos/core";
+import { NotepadText } from "lucide-react";
+import { App } from "@/components/app";
+
+export default function Page() {
+  return (
+    <Desktop className="h-dvh p-4 flex gap-4">
+      <App icon={NotepadText} title="Notas" id="notes">
+        Esta es una ventana
+      </App>
+    </Desktop>
+  );
+}
+```
+
+</Step>
+
+<Step title="Añade una segunda app">
+
+La segunda app tiene la misma forma que la primera, solo cambia el `id`.
+
+```tsx title="app/page.tsx" added="2, 11-13"
+import { Desktop } from "@dayos/core";
+import { Info, NotepadText } from "lucide-react";
+import { App } from "@/components/app";
+
+export default function Page() {
+  return (
+    <Desktop className="h-dvh p-4 flex gap-4">
+      <App icon={NotepadText} title="Notas" id="notes">
+        Esta es una ventana
+      </App>
+      <App icon={Info} title="Acerca de" id="about">
+        Arrastra mi cabecera. Arrastra mis bordes. Prueba el botón de maximizar.
+      </App>
+    </Desktop>
+  );
+}
+```
+
+Abre las dos. La última que enfoques pasa al frente, y al cerrarla la otra se
+queda donde estaba.
+
+<Callout>
+  Cada `id` identifica una ventana, así que dos apps que compartan el mismo `id`
+  comparten su estado: se abren a la vez y renderizan la misma ventana dos veces,
+  una exactamente encima de la otra. En desarrollo, DayOS lo avisa por consola.
+</Callout>
+
+</Step>
+
+</Steps>
+
+## Por dónde seguir
+
+<Cards>
+  <Card href="/es/docs/windows" title="Ventanas">
+    Geometría, maximizado y cómo mantener una ventana montada mientras está cerrada.
+  </Card>
+  <Card href="/es/docs/routing" title="Ventanas con URL">
+    Dale a cada una de estas ventanas una ruta propia.
+  </Card>
+  <Card
+    href="https://github.com/Jared-MB/dayos/tree/main/apps/examples/nextjs"
+    title="La app de ejemplo"
+  >
+    Un escritorio funcionando con rutas estáticas, dinámicas y anidadas.
+  </Card>
+</Cards>

@@ -1,0 +1,135 @@
+---
+title: Controlar el estado
+description: Abre ventanas sin control externo, o manéjalas desde fuera para
+  persistencia, un dock o atajos.
+keywords: controlado, no controlado, openWindows, defaultOpen, useDesktop
+---
+
+## No controlado
+
+Es el comportamiento por defecto: el escritorio mantiene su propia lista, y
+`defaultOpenWindows` la inicializa con las ventanas que quieras abiertas desde
+el principio.
+
+```tsx
+<Desktop defaultOpenWindows={["notes"]}>
+  <App id="notes" />
+  <App id="about" />
+</Desktop>
+```
+
+El orden de la lista es el orden de apilado: el último `id` es la ventana que
+está delante.
+
+## Controlado
+
+Pasa `openWindows` y `onOpenWindowsChange` y el escritorio deja de guardar
+estado. Cada apertura, cierre y cambio de foco pasa por ti:
+
+```tsx
+function Workspace() {
+  const [openWindows, setOpenWindows] = useState<string[]>([]);
+
+  return (
+    <Desktop
+      className="desktop"
+      onOpenWindowsChange={setOpenWindows}
+      openWindows={openWindows}
+    >
+      <App id="notes" />
+      <App id="about" />
+    </Desktop>
+  );
+}
+```
+
+### Persistir una sesión
+
+Controlar el estado te permite persistirlo entre sesiones:
+
+```tsx
+const STORAGE_KEY = "workspace";
+
+function Workspace() {
+  const [openWindows, setOpenWindows] = useState<string[]>([]);
+
+  // Después de montar, nunca durante el render: el servidor no accede al
+  // almacenamiento, y leerlo al renderizar es un desajuste de hidratación.
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) setOpenWindows(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(openWindows));
+  }, [openWindows]);
+
+  return (
+    <Desktop onOpenWindowsChange={setOpenWindows} openWindows={openWindows}>
+      {/* ... */}
+    </Desktop>
+  );
+}
+```
+
+Así, la próxima vez que abras el sitio, se restauran las ventanas que tenías
+abiertas.
+
+## Por ventana
+
+Igual que controlas el escritorio entero, puedes controlar cada ventana.
+
+```tsx
+<DesktopApp defaultOpen id="notes">
+  {/* se abre al montar, y luego ya no se toca */}
+</DesktopApp>
+```
+
+```tsx
+<DesktopApp
+  id="settings"
+  onOpenChange={setSettingsOpen}
+  open={isSettingsOpen}
+>
+  {/* se mantiene sincronizada con tu estado, en ambos sentidos */}
+</DesktopApp>
+```
+
+<Callout title="defaultOpen solo inicializa el cliente">
+  `defaultOpen` solo se ejecuta en el cliente, así que una ventana abierta de
+  esta forma no existe en el HTML del servidor. Para que una ventana venga
+  abierta desde el servidor, ponla en `defaultOpenWindows` del escritorio: eso
+  es estado del padre y se decide durante el render.
+</Callout>
+
+## Gestionar el escritorio desde fuera
+
+`useDesktop` funciona en cualquier punto dentro de `Desktop`, así que los
+controles no tienen por qué vivir en una ventana:
+
+```tsx
+function Shortcuts() {
+  const { openWindow, closeWindow, activeWindowId } = useDesktop();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "w" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        if (activeWindowId) closeWindow(activeWindowId);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [activeWindowId, closeWindow]);
+
+  return null;
+}
+```
+
+### Las operaciones
+
+- `openWindow(id)` — la abre, o la trae al frente si ya estaba abierta.
+- `closeWindow(id)` — la cierra. No hace nada si no estaba abierta.
+- `focusWindow(id)` — la trae al frente sin abrirla. Enfocar la ventana que ya
+  está delante no cambia nada y no vuelve a renderizar nada.

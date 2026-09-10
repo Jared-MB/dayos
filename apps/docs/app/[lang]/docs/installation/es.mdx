@@ -1,0 +1,48 @@
+---
+title: Instalación
+keywords: instalar, npm, pnpm, yarn, configuración
+---
+
+DayOS está dividido en dos paquetes: el núcleo, que contiene toda la funcionalidad, y un adaptador de Next, que añade una URL a cada ventana.
+El núcleo es suficiente para un escritorio de una sola página, y el adaptador es opcional.
+
+```bash
+pnpm add @dayos/core
+```
+
+O con npm o yarn:
+
+```bash
+npm install @dayos/core
+```
+
+```bash
+yarn add @dayos/core
+```
+
+## El adaptador de Next
+
+Añade `@dayos/next` para que cada ventana tenga una URL propia y funcione con renderizado en servidor (SSR).
+
+```bash
+pnpm add @dayos/next
+```
+
+<Callout>
+  El adaptador es opcional: sin él solo pierdes las URL. Un escritorio
+  construido solo sobre el núcleo funciona igual, en una sola página.
+</Callout>
+
+## Siguientes pasos
+
+<Cards>
+  <Card href="/es/docs/quick-start" title="Inicio rápido">
+    Pon en pantalla un escritorio con dos ventanas.
+  </Card>
+  <Card href="/es/docs/styling" title="Estilos">
+    Qué define DayOS, y cómo dar estilo a todo lo demás.
+  </Card>
+  <Card href="/es/docs/troubleshooting" title="Problemas comunes">
+    Las dos reglas de CSS que conviene añadir antes de necesitarlas.
+  </Card>
+</Cards>

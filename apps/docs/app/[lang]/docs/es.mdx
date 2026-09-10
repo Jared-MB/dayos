@@ -1,0 +1,90 @@
+---
+title: Introducción
+description: DayOS es un gestor de ventanas para React: headless, sin estilos y completamente personalizable.
+keywords: resumen, qué es dayos, headless, sin estilos
+---
+
+Un escritorio, sus iconos y sus ventanas caben en un solo árbol de componentes:
+
+```tsx title="desktop.tsx"
+import {
+  Desktop,
+  DesktopApp,
+  DesktopIcon,
+  Window,
+  WindowContent,
+  WindowHeader,
+  WindowName,
+} from "@dayos/core";
+
+<Desktop className="h-dvh">
+  <DesktopApp id="notes">
+    <DesktopIcon>Notes</DesktopIcon>
+    <Window>
+      <WindowHeader>
+        <WindowName>Notes</WindowName>
+      </WindowHeader>
+      <WindowContent>Hello</WindowContent>
+    </Window>
+  </DesktopApp>
+  <DesktopApp id="other">
+    <DesktopIcon>Other</DesktopIcon>
+    <Window>
+      <WindowHeader>
+        <WindowName>Other</WindowName>
+      </WindowHeader>
+      <WindowContent>Hello from other window</WindowContent>
+    </Window>
+  </DesktopApp>
+</Desktop>;
+```
+import { BareExample } from "../../_components/bare-example";
+
+Ese mismo código, ya renderizado. Abre las ventanas desde los iconos,
+expándelas y ciérralas:
+
+<BareExample/>
+
+El escritorio de arriba vive dentro de esta página, no la reemplaza. Envuelve
+con DayOS solo la parte de tu app que quieras convertir en escritorio: el
+ejemplo de código usa `h-dvh` para ocupar la pantalla entera, pero cualquier
+contenedor sirve.
+
+<Callout type='warning'>
+DayOS imita la apariencia de un sistema operativo, pero no es uno:
+no gestiona procesos ni archivos. Todo lo que ves son componentes de React.
+</Callout>
+
+## Estructura
+
+DayOS tiene dos paquetes: `@dayos/core`, con toda la funcionalidad,
+y `@dayos/next`, un adaptador opcional que da una URL a cada ventana.
+
+<Cards>
+  <Card href="/es/docs/api/core" title="@dayos/core">
+    Ventanas, escritorios e iconos: la funcionalidad principal.
+  </Card>
+  <Card href="/es/docs/api/next" title="@dayos/next">
+    Adaptador opcional para el App Router de Next.js.
+  </Card>
+</Cards>
+
+`@dayos/core` funciona por sí solo en cualquier app de React, como una SPA.
+Añade `@dayos/next` con el App Router para asignar una URL a cada ventana
+y habilitar el renderizado en servidor (SSR).
+
+## Requisitos
+
+- `react@19` y `react-dom@19`.
+- Para `@dayos/next`: `next@16` con el App Router.
+
+## Próximos pasos
+
+<Cards>
+  <Card href="/es/docs/installation" title="Instalación">
+    Añade los paquetes a una app de React o de Next.js.
+  </Card>
+  <Card href="/es/docs/quick-start" title="Inicio rápido">
+    Construye un escritorio con dos ventanas desde cero.
+  </Card>
+</Cards>

@@ -1,0 +1,113 @@
+---
+title: Installation
+description: Add @dayos/core to a React app, and @dayos/next if you want windows
+  with URLs.
+keywords: install, npm, pnpm, yarn, setup, requirements
+---
+
+## The core
+
+Everything except URLs lives in `@dayos/core`. It is a React library and nothing
+more: it does not know about Next, and it does not know about any router.
+
+```bash
+pnpm add @dayos/core
+```
+
+Or with npm and yarn:
+
+```bash
+npm install @dayos/core
+```
+
+```bash
+yarn add @dayos/core
+```
+
+## The Next adapter
+
+If you want each window to have a URL of its own, add `@dayos/next` alongside
+the core. The adapter lists the core as a peer dependency, so both go in.
+
+```bash
+pnpm add @dayos/core @dayos/next
+```
+
+<Callout>
+  The adapter is optional in the real sense: leaving it out costs no features
+  other than URLs. A desktop built on the core alone works the same, on a single
+  page.
+</Callout>
+
+## Requirements
+
+### Peer dependencies
+
+The core needs React 19, which it declares as a peer dependency rather than
+bundling:
+
+```json title="package.json"
+{
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+The adapter adds Next on top of that:
+
+```json title="package.json"
+{
+  "peerDependencies": {
+    "@dayos/core": "^0.2.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+### Bundled dependencies
+
+The core brings three of its own: `react-rnd` for dragging and resizing, and
+`clsx` with `tailwind-merge` for joining the classes you pass with the ones a
+component contributes. You do not have to use Tailwind — the merge is a no-op on
+class names that are not Tailwind utilities.
+
+## Client components
+
+The core is client-side from end to end: it uses context, effects and portals.
+Its entry point carries `"use client"`, so importing it from a server component
+is fine — but the component that renders your desktop is a client component, and
+the file it lives in needs the directive.
+
+```tsx title="app/shell.tsx"
+"use client";
+
+import { Desktop } from "@dayos/core";
+
+export function Shell({ children }: { children: React.ReactNode }) {
+  return <Desktop className="desktop">{children}</Desktop>;
+}
+```
+
+<Callout type="warning" title="This does not make your pages client components">
+  The shell is a client component; the content that goes inside a window need not
+  be. In a Next app the pages stay server components and their rendered output is
+  passed in as children — the desktop never renders them, it only positions them.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card href="/docs/quick-start" title="Quick Start">
+    Put a desktop with two windows on the screen.
+  </Card>
+  <Card href="/docs/styling" title="Styling">
+    What DayOS sets, and how to style everything else.
+  </Card>
+  <Card href="/docs/troubleshooting" title="Troubleshooting">
+    The two CSS rules worth adding before you need them.
+  </Card>
+</Cards>

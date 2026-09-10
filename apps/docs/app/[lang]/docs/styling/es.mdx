@@ -1,0 +1,118 @@
+---
+title: Estilos
+keywords: css, tailwind, className, atributos de datos, tema
+---
+
+DayOS no incluye ninguna hoja de estilos. No hay nada que importar, nada que
+sobrescribir y ningún tema contra el que pelear.
+
+## Lo que sí fija DayOS
+
+Solo hay unos pocos estilos, los justos para que todo funcione como esperas.
+
+### Desktop
+
+```css
+position: relative;
+overflow: hidden;
+```
+
+### Window
+
+El marco usa posicionamiento absoluto, con un `z-index` que viene de su
+posición en la pila. Dentro, el diálogo es una columna flex:
+
+```css
+display: flex;
+flex-direction: column;
+height: 100%;
+```
+
+### WindowContent
+
+```css
+flex: 1 1 0%;
+min-height: 0;
+overflow: auto;
+```
+
+Esto es `flex: 1` con `min-height: 0` y deliberadamente no `height: 100%`.
+Dentro de una columna flex, el `100%` se calcula sobre la altura completa de la
+ventana e ignora la cabecera, así que el contenido se desborda fuera de la
+ventana en lugar de hacer scroll dentro de ella.
+
+### WindowHeader
+
+La cabecera lleva una clase `window-drag-handle`. No es un estilo: es el
+selector con el que el arrastre reconoce desde dónde se mueve la ventana.
+
+## Pasar tus propios estilos
+
+Todos los componentes aceptan `className` y `style`:
+
+- `className` pasa por `clsx` y `tailwind-merge`, así que una utilidad de
+  Tailwind tuya gana a la que aportó DayOS en lugar de que las dos acaben en la
+  lista de clases.
+- `style` se fusiona clave a clave, y el tuyo gana en caso de colisión.
+
+<Callout>
+  No necesitas Tailwind. `tailwind-merge` solo sabe eliminar duplicados de
+  utilidades de Tailwind; con cualquier otro nombre de clase se limita a dejarlo
+  pasar.
+</Callout>
+
+## Atributos de estado
+
+Lo que merece la pena estilizar según el estado se expone como atributos de
+datos, para que se pueda seleccionar desde CSS sin una sola línea de JavaScript
+en tus estilos.
+
+<PropsTable>
+  <Prop name="data-interacting" type="Desktop">
+    Presente mientras se arrastra o redimensiona cualquier ventana. Su uso
+    principal es neutralizar los iframes mientras dure la interacción.
+  </Prop>
+  <Prop name="data-window" type="Window (solo en renderizado de servidor)">
+    Marca el marco estático que aparece en el HTML del servidor, antes de que
+    haya un escritorio al que entrar por portal.
+  </Prop>
+  <Prop name="data-maximized" type="Window, WindowHeader">
+    Presente mientras la ventana llena el escritorio. Útil para quitar las
+    esquinas redondeadas.
+  </Prop>
+</PropsTable>
+
+```css
+.desktop[data-interacting] iframe {
+  pointer-events: none;
+}
+
+.window-header[data-maximized] {
+  border-radius: 0;
+}
+```
+
+## Con Tailwind
+
+DayOS es totalmente compatible con Tailwind.
+
+```tsx
+<Desktop className="h-dvh bg-slate-900 [&[data-interacting]_iframe]:pointer-events-none">
+  <DesktopApp id="notes">
+    <DesktopIcon className="flex flex-col items-center gap-1 rounded-lg p-2 text-white hover:bg-white/15">
+      <DesktopIconText className="text-xs">Notas</DesktopIconText>
+    </DesktopIcon>
+
+    <Window className="overflow-hidden rounded-xl border border-zinc-300 bg-zinc-100 shadow-2xl">
+      <WindowHeader className="flex cursor-grab items-center gap-2 border-b border-zinc-300 bg-white px-3 py-2 data-maximized:rounded-none">
+        <WindowName className="text-sm font-semibold">Notas</WindowName>
+        <WindowActions className="ml-auto flex gap-1">
+          <WindowClose className="size-6 rounded-md border border-zinc-300">✕</WindowClose>
+        </WindowActions>
+      </WindowHeader>
+      <WindowContent className="p-4">Hola</WindowContent>
+    </Window>
+  </DesktopApp>
+</Desktop>
+```
+
