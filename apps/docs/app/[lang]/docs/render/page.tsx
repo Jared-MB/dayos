@@ -5,14 +5,14 @@ import En from "./en.mdx";
 import Es from "./es.mdx";
 
 /**
- * /docs/composition
+ * /docs/render
  *
  * The page is the two files next to this one: each opens with its own title
  * and description, and carries the prose under them. All this route adds is
  * which of the two the reader asked for. Where the page sits among the others
  * — its section, and the pages either side of it — is `app/_lib/nav.ts`.
  */
-const HREF = "/docs/composition";
+const HREF = "/docs/render";
 
 const CONTENT: Record<Locale, MDXContent> = { en: En, es: Es };
 

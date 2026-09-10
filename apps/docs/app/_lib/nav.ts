@@ -47,7 +47,7 @@ export const OUTLINE: readonly OutlineSection[] = [
       "/docs/desktop-and-apps",
       "/docs/windows",
       "/docs/styling",
-      "/docs/composition",
+      "/docs/render",
       "/docs/state",
       "/docs/server-rendering",
     ],

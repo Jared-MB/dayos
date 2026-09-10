@@ -1,0 +1,91 @@
+---
+title: Renderizar otro elemento
+description: La prop render cambia el elemento que emite un componente y le
+  conserva el comportamiento.
+keywords: render, asChild, slot, Link, polimórfico
+---
+
+Cada componente de DayOS emite un elemento de HTML semántico: un icono es un
+`button`, una cabecera es un `header`, un título es un `h2`. Cuando ese no es
+el elemento adecuado, la prop `render` lo cambia y conserva el comportamiento.
+
+## La prop `render`
+
+Recibe un elemento, no un componente ni una función. DayOS lo clona con sus
+propias props fusionadas dentro:
+
+```tsx
+import Link from "next/link";
+
+<DesktopIcon render={<Link href="/notes" />}>Notas</DesktopIcon>
+```
+
+El resultado es un enlace que navega al pulsarlo y abre la ventana al hacer
+doble clic. Es un solo elemento, no un enlace envolviendo un botón.
+
+## Envolver un componente de DayOS
+
+Un componente tuyo que siga aceptando `render` necesita el tipo `RenderProp`,
+que se exporta exactamente para esto:
+
+```tsx
+import { DesktopIcon, type RenderProp } from "@dayos/core";
+
+export function AppIcon({
+  glyph,
+  label,
+  render,
+}: {
+  glyph: string;
+  label: string;
+  render?: RenderProp<React.ComponentProps<"button">>;
+}) {
+  return (
+    <DesktopIcon className="icon" render={render}>
+      <span aria-hidden="true" className="icon-glyph">
+        {glyph}
+      </span>
+      <DesktopIconText>{label}</DesktopIconText>
+    </DesktopIcon>
+  );
+}
+```
+
+## Sustituciones habituales
+
+### Un icono que es un enlace
+
+Con `@dayos/next`, así es como un icono navega a una ruta y abre su ventana.
+
+```tsx
+<DesktopIcon render={<Link href={href} />}>
+  <DesktopIconText>{title}</DesktopIconText>
+</DesktopIcon>
+```
+
+### Un título que no es un `h2`
+
+`WindowName` es un `h2`, que encaja cuando la ventana es una sección de la
+página y no cuando no lo es. Así cambias el elemento sin perder el `id` que
+etiqueta el diálogo:
+
+```tsx
+<WindowName render={<span />}>Notas</WindowName>
+```
+
+### Un control que abre un menú
+
+```tsx
+<WindowActions>
+  <WindowAction render={<DropdownMenu.Trigger />}>⋯</WindowAction>
+  <WindowExpand>▢</WindowExpand>
+  <WindowClose>✕</WindowClose>
+</WindowActions>
+```
+
+<Callout type="warning" title="Un nivel cada vez">
+  `render` reemplaza el elemento que emite un componente, así que encadenar dos
+  librerías que usan la misma técnica significa que cada una clona a la
+  siguiente. Funciona, pero conviene revisar el orden de la fusión cuando un
+  manejador no se dispara.
+</Callout>
