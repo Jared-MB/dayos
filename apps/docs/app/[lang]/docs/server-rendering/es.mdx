@@ -8,7 +8,7 @@ keywords: ssr, hidratación, server components, parpadeo, estático
 Un escritorio que se renderiza vacío en el servidor y se rellena al hidratar te
 da un parpadeo de nada, contenido que los buscadores no ven, y una ventana que
 salta a su sitio cuando llega React. DayOS evita las tres cosas, y merece la
-pena entender cómo antes de ponerte a depurarlo.
+pena entender cómo lo hace antes de ponerte a depurarlo.
 
 ## Los dos marcos
 
@@ -21,7 +21,7 @@ Una vez montada, la ventana entra por portal en el elemento del escritorio y se
 puede arrastrar y redimensionar. Este es el caso normal, y es lo que ves en el
 navegador.
 
-### Sin él: el marco estático
+### Sin escritorio: el marco estático
 
 En el servidor — y en el render de hidratación, donde el nodo del escritorio es
 igual de desconocido — la ventana se renderiza en su sitio, con el mismo marcado
@@ -34,13 +34,13 @@ donde el marco interactivo va a poner la ventana al montarse: centrada, al 70%
 del escritorio.
 
 ```css
-/* No defaultSize: a percentage that matches the 70% the mounted window uses. */
+/* Sin defaultSize: un porcentaje que coincide con el 70% de la ventana montada. */
 width: 70%;
 height: 70%;
 left: 15%;
 top: 15%;
 
-/* With a defaultSize: pixels, centred the way calc can express it. */
+/* Con defaultSize: píxeles, centrados como calc puede expresarlo. */
 width: 520px;
 height: 460px;
 left: calc(50% - 260px);
@@ -49,29 +49,26 @@ top: calc(50% - 230px);
 
 <Callout title="Por qué esto importa">
   Si los dos marcos no coincidieran, el cambio al hidratar se leería como un
-  salto. No es hipotético: es lo que pasaba cuando el marco estático salía en la
-  esquina. Las cuentas son compartidas y hay un test que los compara, así que un
-  cambio en uno tiene que ser un cambio en los dos.
+  salto.
 </Callout>
 
 ## Qué ventanas están abiertas en el servidor
 
-Solo aquello que se le dice al escritorio durante el render. Con el núcleo a
-secas eso significa `defaultOpenWindows`:
+Solo se renderiza en el servidor lo que se le dice al escritorio con
+`defaultOpenWindows`:
 
 ```tsx
 <Desktop defaultOpenWindows={["notes"]}>
 ```
 
-El `defaultOpen` de `DesktopApp` no cuenta. Se ejecuta en un efecto, así que
-abre la ventana solo en el cliente — una app puede inicializarse a sí misma pero
-no el estado inicial del escritorio, que le pertenece a su padre.
+El `defaultOpen` de `DesktopApp` se ejecuta solo en el cliente, así que la
+ventana que abre no aparece en el HTML del servidor ni en la build.
 
-## Con el adaptador de Next
+## Con Next.js
 
-Esta es toda la razón de ser del adaptador. `WindowRouteProvider` averigua a qué
-ventana pertenece la URL pedida durante ese mismo render, así que la ventana que
-coincide nace abierta:
+`WindowRouteProvider` averigua a qué ventana pertenece la URL pedida durante
+ese mismo render, así que, si una ventana coincide, se renderiza en el
+servidor:
 
 ```tsx
 const [openWindows, setOpenWindows] = useState<string[]>(() => {
@@ -81,11 +78,9 @@ const [openWindows, setOpenWindows] = useState<string[]>(() => {
 ```
 
 El resultado es que pedir `/about` devuelve HTML con la ventana About abierta y
-el contenido de la página About dentro. Mientras esto vivió en un efecto, el
-HTML salía siempre con un escritorio vacío y el contenido de la página se tiraba
-a la basura — no había ninguna ventana ahí para reclamarlo.
+el contenido de la página About dentro.
 
-## Componentes de servidor dentro de ventanas
+### Componentes de servidor dentro de ventanas
 
 El escritorio es un componente de cliente; lo que va dentro de una ventana no
 tiene por qué serlo. En una app de Next las páginas siguen siendo componentes de
@@ -101,9 +96,9 @@ export default function RootLayout({
     <html lang="es">
       <body>
         {/*
-          The current route's content goes in as a prop rather than as a child:
-          the window it belongs to claims it from the inside instead of it
-          sitting loose on the desktop.
+          El contenido de la ruta actual entra como prop y no como hijo: la
+          ventana a la que pertenece lo reclama desde dentro, en lugar de
+          quedarse suelto en el escritorio.
         */}
         <Shell>{children}</Shell>
       </body>
@@ -113,10 +108,15 @@ export default function RootLayout({
 ```
 
 La ventana nunca renderiza la página. Posiciona un nodo que ya se renderizó en
-otro sitio, que es por lo que un componente de servidor puede vivir dentro de
-una ventana arrastrable sin convertirse en un componente de cliente.
+otro sitio, y por eso un componente de servidor puede vivir dentro de una
+ventana arrastrable sin convertirse en un componente de cliente.
 
-## Contenido congelado
+<Callout>
+  Puedes ver más sobre cómo implementar DayOS con el App Router de Next en
+  [Ventanas con URL](/es/docs/routing).
+</Callout>
+
+### Contenido congelado
 
 Cuando el foco se va a otra ventana, la que queda detrás sigue mostrando lo que
 tenía en lugar de seguir a la URL. Quedarse con el nodo de React no basta por sí
@@ -134,7 +134,7 @@ vuelta a su propio segmento.
   enseñando el momento en que perdió el foco.
 </Callout>
 
-## Depuración
+## Problemas comunes
 
 - **La ventana entra con un parpadeo desde la esquina.** La geometría estática y
   la interactiva han divergido. Busca un `style` que solo se aplique a una de

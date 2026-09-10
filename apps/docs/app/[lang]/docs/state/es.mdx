@@ -1,19 +1,15 @@
 ---
 title: Controlar el estado
-description: Abre ventanas sin control externo, o gobiérnalas desde fuera para
+description: Abre ventanas sin control externo, o manéjalas desde fuera para
   persistencia, un dock o atajos.
 keywords: controlado, no controlado, openWindows, defaultOpen, useDesktop
 ---
 
-Qué ventanas están abiertas es una sola lista, que guarda `Desktop`. Si lo dejas
-a su aire, se gestiona solo. Si le pasas un valor y un callback, pasa a ser tuya
-— que es cómo se persiste, se restaura, o se gobierna el estado de las ventanas
-desde un dock o un atajo de teclado.
+## No controlado
 
-## Sin control externo
-
-Lo de por defecto. El escritorio mantiene su propia lista, y
-`defaultOpenWindows` la inicializa:
+Es el comportamiento por defecto: el escritorio mantiene su propia lista, y
+`defaultOpenWindows` la inicializa con las ventanas que quieras abiertas desde
+el principio.
 
 ```tsx
 <Desktop defaultOpenWindows={["notes"]}>
@@ -22,7 +18,8 @@ Lo de por defecto. El escritorio mantiene su propia lista, y
 </Desktop>
 ```
 
-El orden es el orden de apilado: el último id es la ventana que está delante.
+El orden de la lista es el orden de apilado: el último `id` es la ventana que
+está delante.
 
 ## Controlado
 
@@ -46,16 +43,9 @@ function Workspace() {
 }
 ```
 
-<Callout type="warning">
-  Controlado significa controlado. Si `onOpenWindowsChange` no desemboca en un
-  `openWindows` nuevo, no se abre ni se cierra nada — el botón de cerrar
-  parecerá estropeado.
-</Callout>
-
 ### Persistir una sesión
 
-La lista es un array de cadenas, así que sobrevive a una ida y vuelta por el
-almacenamiento sin ninguna ceremonia:
+Controlar el estado te permite persistirlo entre sesiones:
 
 ```tsx
 const STORAGE_KEY = "workspace";
@@ -63,8 +53,8 @@ const STORAGE_KEY = "workspace";
 function Workspace() {
   const [openWindows, setOpenWindows] = useState<string[]>([]);
 
-  // After mount, never during render: the server has no access to storage, and
-  // reading it while rendering is a hydration mismatch.
+  // Después de montar, nunca durante el render: el servidor no accede al
+  // almacenamiento, y leerlo al renderizar es un desajuste de hidratación.
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) setOpenWindows(JSON.parse(stored));
@@ -82,14 +72,16 @@ function Workspace() {
 }
 ```
 
+Así, la próxima vez que abras el sitio, se restauran las ventanas que tenías
+abiertas.
+
 ## Por ventana
 
-`DesktopApp` acepta el mismo par para una sola ventana, que a menudo es todo lo
-que necesitas:
+Igual que controlas el escritorio entero, puedes controlar cada ventana.
 
 ```tsx
 <DesktopApp defaultOpen id="notes">
-  {/* se abre al montar, y después se la deja en paz */}
+  {/* se abre al montar, y luego ya no se toca */}
 </DesktopApp>
 ```
 
@@ -103,19 +95,14 @@ que necesitas:
 </DesktopApp>
 ```
 
-`onOpenChange` se dispara venga el cambio de donde venga — el icono, el botón de
-cerrar, <kbd>Escape</kbd>, una ruta, el botón de otra ventana. Vigila el estado
-en lugar de envolver un control concreto, así que no hay ningún camino que se lo
-salte.
-
 <Callout title="defaultOpen solo inicializa el cliente">
-  Se ejecuta en un efecto, así que una ventana abierta de esta forma no existe
-  en el HTML del servidor. Para que una ventana venga abierta desde el servidor,
-  ponla en el `defaultOpenWindows` del escritorio — eso es estado del padre, y
-  se decide durante el render.
+  `defaultOpen` solo se ejecuta en el cliente, así que una ventana abierta de
+  esta forma no existe en el HTML del servidor. Para que una ventana venga
+  abierta desde el servidor, ponla en `defaultOpenWindows` del escritorio: eso
+  es estado del padre y se decide durante el render.
 </Callout>
 
-## Gobernar el escritorio desde fuera
+## Gestionar el escritorio desde fuera
 
 `useDesktop` funciona en cualquier punto dentro de `Desktop`, así que los
 controles no tienen por qué vivir en una ventana:
@@ -146,9 +133,3 @@ function Shortcuts() {
 - `closeWindow(id)` — la cierra. No hace nada si no estaba abierta.
 - `focusWindow(id)` — la trae al frente sin abrirla. Enfocar la ventana que ya
   está delante no cambia nada y no vuelve a renderizar nada.
-
-## Con rutas
-
-`RoutedDesktop` es un escritorio controlado cuyo controlador es la URL, y por
-eso no acepta las props de estado de ventanas: las gestiona el proveedor. Lee el
-estado con `useDesktop` como siempre, y cámbialo navegando.
