@@ -100,7 +100,7 @@ export function docMetadata(lang: Locale, href: string): Metadata {
   if (!page) return {};
 
   return {
-    title: `${page.title} — DayOS`,
+    title: `${page.title} - DayOS`,
     description: page.description,
     // The Markdown twin, announced in the head so something crawling the page
     // can take the plain version without being told about it. `canonical` is
