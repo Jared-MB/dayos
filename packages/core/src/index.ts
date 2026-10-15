@@ -40,3 +40,4 @@ export {
   type WindowProps,
   windowRect,
 } from "./window";
+export { useWindowPresence, type WindowPresence } from "./window-presence";
