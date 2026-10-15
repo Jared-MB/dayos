@@ -98,14 +98,17 @@ y también lo hacen <kbd>Enter</kbd> o <kbd>Espacio</kbd> cuando el icono tiene 
 
 <Step title="Dale controles a la ventana">
 
-`WindowActions` es el grupo de controles: `WindowExpand` maximiza y restaura,
-y `WindowClose` cierra.
+`WindowActions` es el grupo de controles: `WindowMinimize` minimiza,
+`WindowExpand` maximiza y restaura, y `WindowClose` cierra.
 
-```tsx title="app/page.tsx" added="4-11, 2"
+```tsx title="app/page.tsx" added="4-14, 2"
 <Window className="bg-zinc-900 rounded-md border border-zinc-800">
   <WindowHeader className="border-b border-b-zinc-800 p-4 flex justify-between items-center">
     <WindowName>Notas</WindowName>
     <WindowActions className="flex items-center gap-2">
+      <WindowMinimize className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
+        –
+      </WindowMinimize>
       <WindowExpand className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
         ▢
       </WindowExpand>
@@ -138,6 +141,7 @@ import {
   WindowContent,
   WindowExpand,
   WindowHeader,
+  WindowMinimize,
   WindowName,
 } from "@dayos/core";
 
@@ -161,6 +165,9 @@ export function App({ children, ...props }: Props) {
         <WindowHeader className="border-b border-b-zinc-800 p-4 flex justify-between items-center">
           <WindowName>{props.title}</WindowName>
           <WindowActions className="flex items-center gap-2">
+            <WindowMinimize className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
+              –
+            </WindowMinimize>
             <WindowExpand className="hover:border border-zinc-700 p-1 size-8 flex items-center justify-center rounded-md">
               ▢
             </WindowExpand>

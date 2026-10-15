@@ -14,6 +14,7 @@ es donde se renderiza tu aplicación.
   <WindowHeader className="window-header">
     <WindowName className="window-title">Notas</WindowName>
     <WindowActions className="window-actions">
+      <WindowMinimize className="window-button">–</WindowMinimize>
       <WindowExpand className="window-button">▢</WindowExpand>
       <WindowClose className="window-button">✕</WindowClose>
     </WindowActions>
@@ -27,7 +28,8 @@ es donde se renderiza tu aplicación.
 - `WindowName` — el título. Es el nombre con el que se anuncia la ventana.
 - `WindowContent` — el contenido.
 - `WindowActions` — el grupo de controles.
-- `WindowExpand`, `WindowClose` — maximizar/restaurar y cerrar.
+- `WindowExpand`, `WindowMinimize`, `WindowClose` — maximizar/restaurar,
+  minimizar y cerrar.
 
 Solo `Window` es obligatorio. Sin cabecera, la ventana no se puede arrastrar,
 pero sí se puede redimensionar y cerrar.
@@ -145,6 +147,25 @@ vídeo. `keepMounted` la mantiene en el árbol y la oculta en su lugar.
   </WindowContent>
 </Window>
 ```
+
+### En cada cierre: minimizar
+
+La prop se aplica a todos los cierres. Para decidirlo en cada uno — un botón de
+minimizar que conserva la ventana junto a uno de cerrar que la descarta — usa
+`WindowMinimize`:
+
+```tsx
+<WindowActions>
+  <WindowMinimize className="window-button">–</WindowMinimize>
+  <WindowClose className="window-button">✕</WindowClose>
+</WindowActions>
+```
+
+Fuera de la cabecera, lo mismo es `close({ keepMounted: true })` de
+`useDesktopApp`, o `closeWindow(id, { keepMounted: true })` de `useDesktop`.
+
+La opción solo cubre el cierre al que se pasa: cuando la ventana vuelve a
+abrirse, un `close()` normal la desmonta como siempre.
 
 <Callout type="warning">
   En una ventana con `keepMounted` los temporizadores siguen en marcha, las

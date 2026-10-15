@@ -130,6 +130,8 @@ function Shortcuts() {
 ### Las operaciones
 
 - `openWindow(id)` — la abre, o la trae al frente si ya estaba abierta.
-- `closeWindow(id)` — la cierra. No hace nada si no estaba abierta.
+- `closeWindow(id, options?)` — la cierra. No hace nada si no estaba abierta.
+  Pasa `{ keepMounted: true }` para ocultarla en lugar de desmontarla, solo en
+  ese cierre: mira [Mantener el estado mientras está cerrada](/es/docs/windows#mantener-el-estado-mientras-está-cerrada).
 - `focusWindow(id)` — la trae al frente sin abrirla. Enfocar la ventana que ya
   está delante no cambia nada y no vuelve a renderizar nada.

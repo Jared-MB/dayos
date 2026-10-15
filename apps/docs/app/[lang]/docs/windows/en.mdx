@@ -17,6 +17,7 @@ and a title bar with none are the same component with different children.
   <WindowHeader className="window-header">
     <WindowName className="window-title">Notes</WindowName>
     <WindowActions className="window-actions">
+      <WindowMinimize className="window-button">–</WindowMinimize>
       <WindowExpand className="window-button">▢</WindowExpand>
       <WindowClose className="window-button">✕</WindowClose>
     </WindowActions>
@@ -31,7 +32,8 @@ and a title bar with none are the same component with different children.
 - `WindowContent` — the body, which scrolls.
 - `WindowActions` — the control group, and `WindowAction` a generic button to
   put in it.
-- `WindowExpand`, `WindowClose` — maximize/restore and close.
+- `WindowExpand`, `WindowMinimize`, `WindowClose` — maximize/restore, minimize
+  and close.
 
 Only `Window` is required. Without a header the window cannot be dragged, but it
 can still be resized and closed.
@@ -142,6 +144,25 @@ the tree and hides it instead.
 
 It is lazy about it: the window mounts the first time it opens, not before. Apps
 that are never opened cost nothing.
+
+### Per close: minimizing
+
+The prop applies to every close. To decide on each one instead — a minimize
+button that keeps the window around next to a close button that discards it —
+use `WindowMinimize`:
+
+```tsx
+<WindowActions>
+  <WindowMinimize className="window-button">–</WindowMinimize>
+  <WindowClose className="window-button">✕</WindowClose>
+</WindowActions>
+```
+
+Outside the header, the same thing is `close({ keepMounted: true })` from
+`useDesktopApp`, or `closeWindow(id, { keepMounted: true })` from `useDesktop`.
+
+The option only covers the close it was passed to: once the window opens again,
+a plain `close()` unmounts it as usual.
 
 <Callout type="warning">
   A kept-mounted window is still mounted. Timers keep running, queries keep

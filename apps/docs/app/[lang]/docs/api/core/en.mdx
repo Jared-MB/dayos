@@ -20,6 +20,7 @@ import {
   WindowContent,
   WindowExpand,
   WindowHeader,
+  WindowMinimize,
   WindowName,
   useDesktop,
   useDesktopApp,
@@ -176,7 +177,8 @@ hydration render.
   </Prop>
   <Prop name="keepMounted" type="boolean" default="false">
     Keeps the window in the tree while closed, so its state survives. It still
-    only mounts the first time it opens.
+    only mounts the first time it opens. For a single close, pass
+    `{ keepMounted: true }` to `close` or `closeWindow` instead.
   </Prop>
   <Prop name="closeOnEscape" type="boolean" default="true">
     Escape closes the focused window. A handler that calls `preventDefault()`
@@ -319,6 +321,22 @@ does.
   </Prop>
 </PropsTable>
 
+## WindowMinimize
+
+Hides the window and keeps it mounted until it opens again: `close({ keepMounted:
+true })` as a button. Like `WindowClose`, it goes through the app’s `close`.
+Labelled `"Minimize window"` unless you pass your own `aria-label`.
+
+<PropsTable>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"button">>'>
+    Replaces the `button` this component emits, keeping its behavior.
+  </Prop>
+  <Prop name="...props" type='React.ComponentProps<"button">'>
+    Everything else is forwarded to the `button`. `className` is merged, `style`
+    is merged key by key, and handlers are composed.
+  </Prop>
+</PropsTable>
+
 ## WindowClose
 
 Closes the window, through the app’s `close` so the change also reaches whoever
@@ -345,7 +363,7 @@ const {
   openWindows,      // string[] — stacking order, last is in front
   activeWindowId,   // string | undefined
   openWindow,       // (id: string) => void — opens, or brings to front
-  closeWindow,      // (id: string) => void
+  closeWindow,      // (id: string, options?: { keepMounted?: boolean }) => void
   focusWindow,      // (id: string) => void — front without opening
   isInteracting,    // boolean — a drag or resize is in progress
   setInteracting,   // (interacting: boolean) => void
@@ -361,7 +379,7 @@ const {
   id,             // string
   isWindowOpen,   // boolean
   open,           // () => void
-  close,          // () => void
+  close,          // (options?: { keepMounted?: boolean }) => void
   focus,          // () => void
 } = useDesktopApp();
 ```

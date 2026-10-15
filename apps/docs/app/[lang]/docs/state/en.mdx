@@ -140,7 +140,9 @@ function Shortcuts() {
 ### The operations
 
 - `openWindow(id)` — opens it, or brings it to the front if it is already open.
-- `closeWindow(id)` — closes it. A no-op if it was not open.
+- `closeWindow(id, options?)` — closes it. A no-op if it was not open. Pass
+  `{ keepMounted: true }` to hide it instead of unmounting it, for that close
+  only: see [Keeping state while closed](/docs/windows#keeping-state-while-closed).
 - `focusWindow(id)` — brings it to the front without opening it. Focusing the
   window that is already in front changes nothing and re-renders nothing.
 

@@ -90,6 +90,7 @@ function DocumentShell({ title }: { title: string }) {
       <WindowHeader className="window-header">
         <WindowName className="window-title">{title}</WindowName>
         <WindowActions className="window-actions">
+          <WindowMinimize className="window-button">–</WindowMinimize>
           <WindowExpand className="window-button">▢</WindowExpand>
           <WindowClose className="window-button">✕</WindowClose>
         </WindowActions>

@@ -121,6 +121,10 @@ function Controls() {
 }
 ```
 
+`close` takes the same options as `closeWindow`, so `close({ keepMounted: true })`
+minimizes instead of closing. Called with no arguments, or as a handler like
+above, it closes for real.
+
 It throws outside a `DesktopApp`. When that is a real possibility — a component
 shared between windowed and non-windowed contexts — `useOptionalDesktopApp`
 returns `null` instead.

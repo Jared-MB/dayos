@@ -108,15 +108,17 @@ resizable from its edges already.
 
 <Step title="Give the window controls">
 
-`WindowActions` is the control group; `WindowExpand` maximizes and restores,
-`WindowClose` closes. Both come with the right accessible names, and
-`WindowExpand` announces which of its two jobs it is currently doing.
+`WindowActions` is the control group; `WindowMinimize` minimizes, `WindowExpand`
+maximizes and restores, `WindowClose` closes. All three come with the right
+accessible names, and `WindowExpand` announces which of its two jobs it is
+currently doing.
 
-```tsx title="app/desktop.tsx" added="4-7"
+```tsx title="app/desktop.tsx" added="4-8"
 <Window className="window">
   <WindowHeader className="window-header">
     <WindowName className="window-title">Notes</WindowName>
     <WindowActions className="window-actions">
+      <WindowMinimize className="window-button">–</WindowMinimize>
       <WindowExpand className="window-button">▢</WindowExpand>
       <WindowClose className="window-button">✕</WindowClose>
     </WindowActions>
@@ -172,6 +174,7 @@ function App({
         <WindowHeader className="window-header">
           <WindowName className="window-title">{title}</WindowName>
           <WindowActions className="window-actions">
+            <WindowMinimize className="window-button">–</WindowMinimize>
             <WindowExpand className="window-button">▢</WindowExpand>
             <WindowClose className="window-button">✕</WindowClose>
           </WindowActions>
