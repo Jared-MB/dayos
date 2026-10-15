@@ -27,6 +27,7 @@ import {
   useDesktop,
   useDesktopApp,
   useOptionalDesktopApp,
+  useWindowPresence,
   windowRect,
   type RenderProp,
 } from "@dayos/core";
@@ -201,13 +202,14 @@ servidor y el de hidratación.
   <Prop name="style" type="React.CSSProperties">
     Se fusiona con los estilos de posicionamiento del propio marco.
   </Prop>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"section">>'>
+    Reemplaza el cuerpo de la ventana — el `section` con `role="dialog"` dentro
+    del marco —, no el marco. El marco es la implementación del arrastre y el
+    redimensionado y se mueve con `transform`, así que el cuerpo es donde va una
+    animación tuya. `className` y `style` siguen yendo al marco. Combínala con
+    `useWindowPresence` para animar el cierre.
+  </Prop>
 </PropsTable>
-
-<Callout>
-  `Window` no acepta una prop `render`. El marco es la implementación del
-  arrastre y el redimensionado, y cambiarle el elemento por debajo no es algo que
-  pueda respetar.
-</Callout>
 
 ### Atributos de datos de Window
 
@@ -217,6 +219,10 @@ servidor y el de hidratación.
   </Prop>
   <Prop name="data-maximized" type="presente | ausente">
     Presente mientras la ventana llena el escritorio.
+  </Prop>
+  <Prop name="data-state" type='"open" | "closed"'>
+    En el cuerpo. `"closed"` mientras una ventana cerrada reproduce su animación
+    de salida (ver `useWindowPresence`).
   </Prop>
 </PropsTable>
 
@@ -387,6 +393,23 @@ const {
   focus,          // () => void
 } = useDesktopApp();
 ```
+
+## useWindowPresence
+
+Permite que el elemento que pasas a `render` de `Window` reproduzca una
+animación de salida. Llamarlo mantiene la ventana en pantalla tras cerrarse
+hasta que se ejecute `safeToRemove`; las ventanas que nunca lo llaman se cierran
+al instante. Lanza un error fuera de `Window`.
+
+```tsx
+const {
+  isPresent,     // boolean — false desde el momento en que la ventana se cierra
+  safeToRemove,  // () => void — llámalo cuando termine la animación de salida
+} = useWindowPresence();
+```
+
+Mientras espera, el cuerpo lleva `data-state="closed"` e `inert`, y el marco no
+se puede arrastrar ni redimensionar. Reabrir durante la salida la cancela.
 
 ## useOptionalDesktopApp
 

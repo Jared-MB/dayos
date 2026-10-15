@@ -25,6 +25,7 @@ import {
   useDesktop,
   useDesktopApp,
   useOptionalDesktopApp,
+  useWindowPresence,
   windowRect,
   type RenderProp,
 } from "@dayos/core";
@@ -198,13 +199,14 @@ hydration render.
   <Prop name="style" type="React.CSSProperties">
     Merged into the frame's own positioning styles.
   </Prop>
+  <Prop name="render" type='RenderProp<React.ComponentProps<"section">>'>
+    Replaces the window's body — the `section` with `role="dialog"` inside the
+    frame — not the frame itself. The frame is the drag and resize
+    implementation and moves with `transform`, so the body is where an animation
+    of your own goes. `className` and `style` keep going to the frame. Pair it
+    with `useWindowPresence` to animate the close.
+  </Prop>
 </PropsTable>
-
-<Callout>
-  `Window` does not take a `render` prop. The frame is the drag and resize
-  implementation, and swapping the element out from under it is not something it
-  can honour.
-</Callout>
 
 ### Window data attributes
 
@@ -214,6 +216,10 @@ hydration render.
   </Prop>
   <Prop name="data-maximized" type="present | absent">
     Present while the window fills the desktop.
+  </Prop>
+  <Prop name="data-state" type='"open" | "closed"'>
+    On the body. `"closed"` while a closed window plays its exit animation
+    (see `useWindowPresence`).
   </Prop>
 </PropsTable>
 
@@ -383,6 +389,22 @@ const {
   focus,          // () => void
 } = useDesktopApp();
 ```
+
+## useWindowPresence
+
+Lets the element passed to `Window`'s `render` play an exit animation. Calling
+it keeps the window on screen after it closes until `safeToRemove` runs; windows
+that never call it close instantly. Throws outside `Window`.
+
+```tsx
+const {
+  isPresent,     // boolean — false from the moment the window closes
+  safeToRemove,  // () => void — call it when the exit animation ends
+} = useWindowPresence();
+```
+
+While it waits, the body has `data-state="closed"` and `inert`, and the frame
+can't be dragged or resized. Reopening during the exit cancels it.
 
 ## useOptionalDesktopApp
 
