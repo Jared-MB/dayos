@@ -372,6 +372,8 @@ const {
   desktopEl,        // HTMLDivElement | null — null until mount
   openWindows,      // string[] — stacking order, last is in front
   activeWindowId,   // string | undefined
+  minimizedWindows, // string[] — closed with keepMounted (WindowMinimize)
+  windowNames,      // Record<string, string> — id → WindowName text, mounted windows only
   openWindow,       // (id: string) => void — opens, or brings to front
   closeWindow,      // (id: string, options?: { keepMounted?: boolean }) => void
   focusWindow,      // (id: string) => void — front without opening
