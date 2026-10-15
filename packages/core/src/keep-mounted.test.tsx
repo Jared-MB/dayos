@@ -201,3 +201,84 @@ describe("WindowMinimize", () => {
     expect(controls.isWindowOpen).toBe(true);
   });
 });
+
+describe("minimizedWindows", () => {
+  it("lists a window minimized with WindowMinimize", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Desktop>
+        <App />
+      </Desktop>,
+    );
+
+    act(() => controls.open());
+    expect(desktop.minimizedWindows).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Minimize window" }));
+
+    expect(desktop.minimizedWindows).toEqual(["notes"]);
+  });
+
+  it("drops the window once it opens again", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Desktop>
+        <App />
+      </Desktop>,
+    );
+
+    act(() => controls.open());
+    await user.click(screen.getByRole("button", { name: "Minimize window" }));
+    act(() => controls.open());
+
+    expect(desktop.minimizedWindows).toEqual([]);
+  });
+
+  it("leaves out a plain close, even on a keepMounted Window", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Desktop>
+        <App keepMounted />
+      </Desktop>,
+    );
+
+    act(() => controls.open());
+    await user.click(screen.getByRole("button", { name: "Close window" }));
+
+    expect(textarea()).not.toBeNull();
+    expect(desktop.minimizedWindows).toEqual([]);
+  });
+
+  it("drops a minimized window that gets a plain close, and unmounts it", async () => {
+    render(
+      <Desktop>
+        <App />
+      </Desktop>,
+    );
+
+    await openAndType("draft");
+    act(() => controls.close({ keepMounted: true }));
+    act(() => desktop.closeWindow("notes"));
+
+    expect(desktop.minimizedWindows).toEqual([]);
+    expect(textarea()).toBeNull();
+  });
+
+  it("keeps a minimized window minimized on a second keepMounted close", async () => {
+    render(
+      <Desktop>
+        <App />
+      </Desktop>,
+    );
+
+    await openAndType("draft");
+    act(() => controls.close({ keepMounted: true }));
+    act(() => controls.close({ keepMounted: true }));
+
+    expect(desktop.minimizedWindows).toEqual(["notes"]);
+    expect(textarea()?.value).toBe("draft");
+  });
+});

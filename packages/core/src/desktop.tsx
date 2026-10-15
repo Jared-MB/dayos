@@ -37,6 +37,19 @@ type DesktopContextType = {
   /** Open windows in stacking order; the last one is the one in front. */
   openWindows: string[];
   activeWindowId?: string;
+  /**
+   * Windows closed on purpose with `keepMounted` (`WindowMinimize`, or a
+   * `close({ keepMounted: true })`): hidden, with their state alive. A window
+   * leaves the list once it opens again or gets a plain close, which unmounts
+   * it.
+   */
+  minimizedWindows: string[];
+  /**
+   * Each window's name, keyed by id: the text of its `WindowName`. Only
+   * windows that are mounted have one, so a minimized window keeps its name
+   * and a closed one doesn't.
+   */
+  windowNames: Record<string, string>;
   openWindow: (id: string) => void;
   closeWindow: (id: string, options?: CloseWindowOptions) => void;
   focusWindow: (id: string) => void;
@@ -78,6 +91,29 @@ const KeptWindowsContext = createContext<string[]>([]);
 
 export const useIsWindowKept = (id: string) =>
   useContext(KeptWindowsContext).includes(id);
+
+/**
+ * Where `WindowName` reports its text. Internal for the same reason as the
+ * registry: only `WindowName` writes to it. `undefined` removes the name.
+ */
+const SetWindowNameContext = createContext<
+  (id: string, name: string | undefined) => void
+>(() => {});
+
+export const useSetWindowName = () => useContext(SetWindowNameContext);
+
+const withName = (
+  names: Record<string, string>,
+  id: string,
+  name: string | undefined,
+) => {
+  // Same reference when nothing changed, so React drops the update.
+  if (names[id] === name) return names;
+  if (name !== undefined) return { ...names, [id]: name };
+
+  const { [id]: _removed, ...rest } = names;
+  return rest;
+};
 
 export type DesktopProps = Omit<React.ComponentProps<"div">, "children"> & {
   children?: React.ReactNode;
@@ -126,14 +162,23 @@ export function Desktop({
   const closeWindow = useCallback(
     (id: string, options?: CloseWindowOptions) =>
       setOpenWindows((prev) => {
-        if (!prev.includes(id)) return prev;
+        const keep = options?.keepMounted === true;
 
-        // Inside the updater because that's the only place that knows the
-        // window was actually open: closing one that's already closed mustn't
-        // bring it back as a hidden mount. `useControllableState` runs the
+        // Already closed. A plain close still finishes off a minimized window
+        // (a taskbar's close, for instance), but a `keepMounted` one mustn't
+        // bring a closed window back as a hidden mount.
+        if (!prev.includes(id)) {
+          if (!keep)
+            setKeptWindows((kept) =>
+              kept.includes(id) ? kept.filter((w) => w !== id) : kept,
+            );
+          return prev;
+        }
+
+        // Inside the updater because that's the only place that knows whether
+        // the window was actually open. `useControllableState` runs the
         // updater synchronously, so this is a plain call and not a side effect
         // inside a React updater.
-        const keep = options?.keepMounted === true;
         setKeptWindows((kept) =>
           kept.includes(id) === keep
             ? kept
@@ -158,6 +203,14 @@ export function Desktop({
     });
   }, [openWindows]);
 
+  const [windowNames, setWindowNames] = useState<Record<string, string>>({});
+
+  const setWindowName = useCallback(
+    (id: string, name: string | undefined) =>
+      setWindowNames((names) => withName(names, id, name)),
+    [],
+  );
+
   const focusWindow = useCallback(
     (id: string) =>
       setOpenWindows((prev) =>
@@ -173,6 +226,8 @@ export function Desktop({
       desktopEl,
       openWindows,
       activeWindowId: openWindows.at(-1),
+      minimizedWindows: keptWindows,
+      windowNames,
       openWindow,
       closeWindow,
       focusWindow,
@@ -182,6 +237,8 @@ export function Desktop({
     [
       desktopEl,
       openWindows,
+      keptWindows,
+      windowNames,
       openWindow,
       closeWindow,
       focusWindow,
@@ -259,9 +316,11 @@ export function Desktop({
     <DesktopContext value={value}>
       <AppRegistryContext value={registerApp}>
         <KeptWindowsContext value={keptWindows}>
-          {renderSlot(render, elementProps, (finalProps) => (
-            <div {...(finalProps as React.ComponentProps<"div">)} />
-          ))}
+          <SetWindowNameContext value={setWindowName}>
+            {renderSlot(render, elementProps, (finalProps) => (
+              <div {...(finalProps as React.ComponentProps<"div">)} />
+            ))}
+          </SetWindowNameContext>
         </KeptWindowsContext>
       </AppRegistryContext>
     </DesktopContext>
