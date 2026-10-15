@@ -12,7 +12,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Rnd, type RndDragEvent } from "react-rnd";
-import { useDesktop, useDesktopApp, useIsWindowKept } from "./desktop";
+import {
+  useDesktop,
+  useDesktopApp,
+  useIsWindowKept,
+  useSetWindowName,
+} from "./desktop";
 import { cn, mergeProps, type RenderProp, renderSlot } from "./utils";
 import {
   useWindowPresenceState,
@@ -562,6 +567,20 @@ export type WindowNameProps = React.ComponentProps<"h2"> & {
 
 export function WindowName({ render, children, ...props }: WindowNameProps) {
   const { titleId } = useWindowFrame();
+  const { id } = useDesktopApp();
+  const setWindowName = useSetWindowName();
+
+  // The rendered text and not `children`, so `<WindowName><Icon /> Notes`
+  // still names the window "Notes". Read from the DOM through the title id
+  // because a ref of ours would lose against one passed in `props` or
+  // `render`. It runs after every render since the text can change with any of
+  // them; `setWindowName` ignores a name that didn't change.
+  useEffect(() => {
+    const name = document.getElementById(titleId)?.textContent?.trim();
+    setWindowName(id, name || undefined);
+  });
+
+  useEffect(() => () => setWindowName(id, undefined), [id, setWindowName]);
 
   const elementProps = mergeProps({ id: titleId, children }, props);
 
