@@ -154,3 +154,12 @@ code {
 .window-content {
   padding: 1rem 1.25rem;
 }
+
+.draft {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 16px;
+}

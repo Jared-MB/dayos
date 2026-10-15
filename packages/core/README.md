@@ -67,6 +67,10 @@ out the element it emits while keeping the behavior:
 Your handlers run before the built-in ones and can cancel them with
 `preventDefault()`.
 
+On `Window`, `render` swaps the window's body (the `role="dialog"` section), so
+it can be a `motion.section`. `useWindowPresence()` gives it `isPresent` and
+`safeToRemove` to play an exit animation before the window goes away.
+
 ## Controlling the desktop
 
 `Desktop` works uncontrolled (`defaultOpenWindows`) or controlled

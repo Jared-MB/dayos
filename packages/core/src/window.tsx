@@ -14,6 +14,10 @@ import { createPortal } from "react-dom";
 import { Rnd, type RndDragEvent } from "react-rnd";
 import { useDesktop, useDesktopApp, useIsWindowKept } from "./desktop";
 import { cn, mergeProps, type RenderProp, renderSlot } from "./utils";
+import {
+  useWindowPresenceState,
+  WindowPresenceProvider,
+} from "./window-presence";
 
 const DEFAULT_CASCADE_OFFSET = 32;
 const DEFAULT_SIZE_RATIO = 0.7;
@@ -121,12 +125,21 @@ export type WindowProps = {
    * ends up stuck to the cursor instead of returning to its saved position.
    */
   dragCancel?: string;
+  /**
+   * Replaces the window's body, the `section` with the dialog role inside the
+   * positioned box. It's the body and not the box because the box belongs to
+   * the drag library, which moves it with `transform`: an animation of your own
+   * there would fight it. `className` and `style` still go to the box. Pair it
+   * with `useWindowPresence` to animate the close too.
+   */
+  render?: RenderProp<React.ComponentProps<"section">>;
 };
 
 export function Window({ keepMounted = false, ...props }: WindowProps) {
   const { desktopEl } = useDesktop();
   const { id, isWindowOpen } = useDesktopApp();
   const isKept = useIsWindowKept(id);
+  const { isRendered, presence } = useWindowPresenceState(isWindowOpen);
 
   // With `keepMounted` the window mounts the first time it opens and not
   // before: mounting them all up front would pay for rendering apps that may
@@ -138,8 +151,9 @@ export function Window({ keepMounted = false, ...props }: WindowProps) {
   }, [isWindowOpen]);
 
   // A `closeWindow(id, { keepMounted: true })` keeps it for that one close,
-  // the prop keeps it for every close.
-  const shouldMount = isWindowOpen || (hasBeenOpen && (keepMounted || isKept));
+  // the prop keeps it for every close. `isRendered` and not `isWindowOpen`:
+  // a window playing its exit animation is closed but still on screen.
+  const shouldMount = isRendered || (hasBeenOpen && (keepMounted || isKept));
 
   if (!shouldMount) return null;
 
@@ -148,10 +162,23 @@ export function Window({ keepMounted = false, ...props }: WindowProps) {
   // without `Rnd`: portals don't exist on the server, and rendering here is
   // what puts the open window into the HTML. The browser paints that markup
   // long before React runs, so CSS resolves its geometry.
-  if (!desktopEl) return <StaticWindowFrame {...props} />;
+  if (!desktopEl) {
+    return (
+      <WindowPresenceProvider value={presence}>
+        <StaticWindowFrame {...props} />
+      </WindowPresenceProvider>
+    );
+  }
 
   return createPortal(
-    <WindowFrame {...props} desktopEl={desktopEl} hidden={!isWindowOpen} />,
+    <WindowPresenceProvider value={presence}>
+      <WindowFrame
+        {...props}
+        desktopEl={desktopEl}
+        hidden={!isRendered}
+        isExiting={isRendered && !isWindowOpen}
+      />
+    </WindowPresenceProvider>,
     desktopEl,
   );
 }
@@ -173,6 +200,7 @@ function StaticWindowFrame({
   style,
   defaultSize,
   defaultPosition,
+  render,
 }: Omit<WindowProps, "keepMounted">) {
   const titleId = useId();
 
@@ -219,18 +247,26 @@ function StaticWindowFrame({
         ...style,
       }}
     >
-      <section
-        role="dialog"
-        aria-labelledby={titleId}
-        aria-modal={false}
-        tabIndex={-1}
-        // Structural: the header and the content are one column, and that's
-        // where the `flex-1` that scrolls the content instead of the whole
-        // window comes from.
-        style={WINDOW_BODY_STYLE}
-      >
-        <WindowFrameContext value={frame}>{children}</WindowFrameContext>
-      </section>
+      {renderSlot(
+        render,
+        {
+          role: "dialog",
+          "aria-labelledby": titleId,
+          "aria-modal": false,
+          tabIndex: -1,
+          "data-state": "open",
+          // Structural: the header and the content are one column, and that's
+          // where the `flex-1` that scrolls the content instead of the whole
+          // window comes from.
+          style: WINDOW_BODY_STYLE,
+          children: (
+            <WindowFrameContext value={frame}>{children}</WindowFrameContext>
+          ),
+        },
+        (finalProps) => (
+          <section {...(finalProps as React.ComponentProps<"section">)} />
+        ),
+      )}
     </div>
   );
 }
@@ -247,10 +283,14 @@ function WindowFrame({
   cascadeOffset = DEFAULT_CASCADE_OFFSET,
   closeOnEscape = true,
   dragCancel = "button, a, input, select, textarea",
+  render,
   hidden,
+  isExiting,
 }: Omit<WindowProps, "keepMounted"> & {
   desktopEl: HTMLDivElement;
   hidden: boolean;
+  /** Closed, but still on screen while its exit animation plays. */
+  isExiting: boolean;
 }) {
   const { openWindows, focusWindow, setInteracting } = useDesktop();
   const { id, close } = useDesktopApp();
@@ -395,6 +435,37 @@ function WindowFrame({
     [isMaximized, toggleMaximize, titleId],
   );
 
+  // Once closed the window leaves `openWindows` and its index drops to -1, so
+  // an exit animation would play behind every other window. It keeps the last
+  // stacking it had while open instead.
+  const stackIndex = openWindows.indexOf(id);
+  const lastZIndexRef = useRef(1);
+  if (stackIndex !== -1) lastZIndexRef.current = stackIndex + 1;
+
+  const bodyProps = {
+    role: "dialog",
+    "aria-labelledby": titleId,
+    // Not modal: several windows coexist and the rest of the desktop stays
+    // reachable, so announcing it as modal would be a lie.
+    "aria-modal": false,
+    tabIndex: -1,
+    "data-maximized": isMaximized ? "" : undefined,
+    "data-state": isExiting ? "closed" : "open",
+    // A window on its way out is just a picture of itself: no focus, no clicks.
+    inert: isExiting || undefined,
+    style: WINDOW_BODY_STYLE,
+    onFocusCapture: () => focusWindow(id),
+    onMouseDown: () => focusWindow(id),
+    onKeyDown: (event: React.KeyboardEvent) => {
+      if (!closeOnEscape || event.key !== "Escape") return;
+      if (event.defaultPrevented) return;
+
+      event.stopPropagation();
+      close();
+    },
+    children: <WindowFrameContext value={frame}>{children}</WindowFrameContext>,
+  };
+
   return (
     <Rnd
       ref={rndRef}
@@ -403,8 +474,10 @@ function WindowFrame({
       default={defaultRect}
       minWidth={minWidth}
       minHeight={minHeight}
+      disableDragging={isExiting}
+      enableResizing={!isExiting}
       style={{
-        zIndex: Math.max(0, openWindows.indexOf(id)) + 1,
+        zIndex: lastZIndexRef.current,
         ...(hidden ? { display: "none" } : null),
         ...style,
       }}
@@ -422,27 +495,9 @@ function WindowFrame({
       }}
       onDragStop={() => setInteracting(false)}
     >
-      <section
-        role="dialog"
-        aria-labelledby={titleId}
-        // Not modal: several windows coexist and the rest of the desktop stays
-        // reachable, so announcing it as modal would be a lie.
-        aria-modal={false}
-        tabIndex={-1}
-        data-maximized={isMaximized ? "" : undefined}
-        style={WINDOW_BODY_STYLE}
-        onFocusCapture={() => focusWindow(id)}
-        onMouseDown={() => focusWindow(id)}
-        onKeyDown={(event) => {
-          if (!closeOnEscape || event.key !== "Escape") return;
-          if (event.defaultPrevented) return;
-
-          event.stopPropagation();
-          close();
-        }}
-      >
-        <WindowFrameContext value={frame}>{children}</WindowFrameContext>
-      </section>
+      {renderSlot(render, bodyProps, (finalProps) => (
+        <section {...(finalProps as React.ComponentProps<"section">)} />
+      ))}
     </Rnd>
   );
 }

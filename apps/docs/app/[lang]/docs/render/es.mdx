@@ -84,6 +84,12 @@ etiqueta el diálogo:
 </WindowActions>
 ```
 
+### Una ventana animada
+
+`render` en `Window` sustituye el cuerpo de la ventana, que es donde se conecta
+una librería de animación. La guía completa — animaciones de entrada y salida
+con motion, CSS, GSAP o react-spring — está en [Animación](/es/docs/animation).
+
 <Callout type="warning" title="Un nivel cada vez">
   `render` reemplaza el elemento que emite un componente, así que encadenar dos
   librerías que usan la misma técnica significa que cada una clona a la

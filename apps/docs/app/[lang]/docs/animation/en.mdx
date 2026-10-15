@@ -1,0 +1,286 @@
+---
+title: Animation
+description: Animate windows opening and closing with motion, CSS, GSAP,
+  react-spring or any other library.
+keywords: animation, motion, framer motion, gsap, react-spring, css, exit,
+  transition, useWindowPresence
+---
+
+DayOS ships no animations and depends on no animation library. A window opens
+and closes instantly, and two pieces let you animate it with whatever you
+already use:
+
+- `Window`'s `render` prop swaps the window's body for an element of yours.
+- `useWindowPresence()` keeps a closed window on screen until its exit
+  animation ends.
+
+## How it works
+
+`render` replaces the body — the `section` with `role="dialog"` — rather than the
+frame around it. The frame is the drag and resize implementation and moves with
+`transform`, so an animation of your own there would fight it. The body fills
+the frame, which also means scaling it scales from the center.
+
+```tsx
+const { isPresent, safeToRemove } = useWindowPresence();
+```
+
+- `isPresent` is `false` from the moment the window closes.
+- `safeToRemove` is what you call when the exit animation ends. Until then the
+  window stays on screen.
+
+Calling the hook is what opts the window in: windows that never call it close
+instantly, exactly as before. While a window waits, its body carries
+`data-state="closed"` and `inert`, the frame can no longer be dragged or
+resized, and it keeps its place in the stacking order. Reopening it mid-exit
+cancels the exit and `isPresent` goes back to `true`.
+
+After `safeToRemove` the window goes the way it always would: it unmounts, or it
+hides and keeps its state when it was minimized or has `keepMounted`.
+
+## Rules for any library
+
+<Steps>
+
+<Step title="Spread DayOS's props first">
+
+They carry the dialog role and its label, the flex column the header and
+content rely on, and the Escape and focus handlers. Put your animation props
+after them.
+
+</Step>
+
+<Step title="Put the window's look on the body">
+
+Pass the border, background and shadow to the rendered element —
+`render={<AnimatedBody className="window" />}` — and not to `Window`'s
+`className`, which styles the frame. The frame doesn't animate, so a border on
+it would stay behind while the body fades out.
+
+</Step>
+
+<Step title="Always call safeToRemove">
+
+Call it once the exit finishes, and make sure an exit always runs — even with
+reduced motion. A window whose exit never ends never goes away.
+
+</Step>
+
+<Step title="Mind the server render">
+
+A window that is open in the server HTML is painted before any JavaScript runs.
+If your enter animation starts at `opacity: 0`, skip it for those windows so
+they don't flash.
+
+</Step>
+
+</Steps>
+
+## motion
+
+`onAnimationComplete` tells you the exit is over:
+
+```tsx
+"use client";
+
+import { useWindowPresence, Window } from "@dayos/core";
+import { motion, useReducedMotion } from "motion/react";
+
+type BodyProps = Omit<
+  React.ComponentProps<"section">,
+  "onAnimationStart" | "onDrag" | "onDragStart" | "onDragEnd"
+>;
+
+export function AnimatedBody(props: BodyProps) {
+  const { isPresent, safeToRemove } = useWindowPresence();
+  const reduceMotion = useReducedMotion();
+
+  const variants = {
+    open: { opacity: 1, scale: 1 },
+    closed: { opacity: 0, scale: reduceMotion ? 1 : 0.94 },
+  };
+
+  return (
+    <motion.section
+      {...props}
+      variants={variants}
+      initial="closed"
+      animate={isPresent ? "open" : "closed"}
+      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+      onAnimationComplete={() => {
+        if (!isPresent) safeToRemove();
+      }}
+    />
+  );
+}
+
+<Window render={<AnimatedBody className="window" />}>…</Window>
+```
+
+The `Omit` is there because React's and motion's types disagree on
+`onAnimationStart` and the `onDrag*` handlers. DayOS puts none of them on the
+body, so dropping them loses nothing. For windows open in the server HTML, pass
+`initial={false}`.
+
+<Callout title="Why not exit and AnimatePresence?">
+  `exit` only runs when an element leaves the tree inside an `AnimatePresence`.
+  `Window` decides on its own when to unmount, so wrapping it changes nothing;
+  and a minimized window never leaves the tree at all — it hides to keep its
+  state. `useWindowPresence` is the same handshake `AnimatePresence` uses
+  internally, made available to the window.
+</Callout>
+
+## CSS
+
+No library at all. DayOS already sets `data-state="open"` or `"closed"` on the
+body, so keyframes can key off it, and `onAnimationEnd` tells you the exit is
+over:
+
+```tsx
+"use client";
+
+import { useWindowPresence } from "@dayos/core";
+
+export function AnimatedBody(props: React.ComponentProps<"section">) {
+  const { isPresent, safeToRemove } = useWindowPresence();
+
+  return (
+    <section
+      {...props}
+      onAnimationEnd={(event) => {
+        // `animationend` bubbles: ignore the ones from the window's content.
+        if (event.target !== event.currentTarget) return;
+        if (!isPresent) safeToRemove();
+      }}
+    />
+  );
+}
+```
+
+```css
+.window[data-state="open"] {
+  animation: window-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.window[data-state="closed"] {
+  animation: window-out 140ms ease-in forwards;
+}
+
+@keyframes window-in {
+  from { opacity: 0; transform: scale(0.94); }
+}
+
+@keyframes window-out {
+  to { opacity: 0; transform: scale(0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window[data-state] {
+    animation-duration: 1ms;
+  }
+}
+```
+
+<Callout type="warning">
+  For reduced motion, shorten the animation rather than setting
+  `animation: none`. With no animation there is no `animationend`, and the
+  window never closes.
+</Callout>
+
+## GSAP
+
+DayOS doesn't hand the body a `ref`, so add your own. `onComplete` tells you the
+exit is over:
+
+```tsx
+"use client";
+
+import { useWindowPresence } from "@dayos/core";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { useRef } from "react";
+
+export function AnimatedBody(props: React.ComponentProps<"section">) {
+  const ref = useRef<HTMLElement>(null);
+  const { isPresent, safeToRemove } = useWindowPresence();
+
+  useGSAP(() => {
+    gsap.set(ref.current, { opacity: 0, scale: 0.94 });
+  }, []);
+
+  useGSAP(
+    () => {
+      gsap.to(ref.current, {
+        opacity: isPresent ? 1 : 0,
+        scale: isPresent ? 1 : 0.94,
+        duration: 0.18,
+        ease: isPresent ? "power3.out" : "power3.in",
+        // A reopen mid-exit takes over from the current frame.
+        overwrite: true,
+        onComplete: isPresent ? undefined : safeToRemove,
+      });
+    },
+    { dependencies: [isPresent] },
+  );
+
+  return <section ref={ref} {...props} />;
+}
+```
+
+## react-spring
+
+`onRest` tells you the exit is over. Merge DayOS's `style` with the animated one
+yourself, or the window loses its layout:
+
+```tsx
+"use client";
+
+import { useWindowPresence } from "@dayos/core";
+import { animated, useSpring } from "@react-spring/web";
+import { useEffect } from "react";
+
+export function AnimatedBody({
+  style,
+  ...props
+}: React.ComponentProps<"section">) {
+  const { isPresent, safeToRemove } = useWindowPresence();
+  const [springs, api] = useSpring(() => ({ opacity: 0, scale: 0.94 }));
+
+  useEffect(() => {
+    api.start({
+      opacity: isPresent ? 1 : 0,
+      scale: isPresent ? 1 : 0.94,
+      onRest: (result) => {
+        if (!isPresent && result.finished) safeToRemove();
+      },
+    });
+  }, [isPresent, api, safeToRemove]);
+
+  return <animated.section {...props} style={{ ...style, ...springs }} />;
+}
+```
+
+## At a glance
+
+Where each library tells you the exit is over, and what to watch out for:
+
+<PropsTable>
+  <Prop name="motion" type="onAnimationComplete">
+    Omit `onAnimationStart` and the `onDrag*` handlers from the props type.
+  </Prop>
+  <Prop name="CSS" type="onAnimationEnd">
+    Check `event.target === event.currentTarget`, and never use `animation:
+    none` for reduced motion.
+  </Prop>
+  <Prop name="GSAP" type="onComplete">
+    Add your own `ref`, and use `overwrite: true` so a reopen interrupts
+    cleanly.
+  </Prop>
+  <Prop name="react-spring" type="onRest">
+    Only when `result.finished`. Merge DayOS's `style` with the animated one
+    yourself.
+  </Prop>
+</PropsTable>
+
+Any other library works the same way: animate on `isPresent`, call
+`safeToRemove` when the exit ends.

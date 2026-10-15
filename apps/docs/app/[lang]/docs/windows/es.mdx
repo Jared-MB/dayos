@@ -184,6 +184,10 @@ abrirse, un `close()` normal la desmonta como siempre.
 Un manejador tuyo que llame a `preventDefault()` también lo detiene: así es como
 una ventana con cambios sin guardar pide confirmación antes.
 
+Cerrar es instantáneo por defecto. Para animarlo, sustituye el cuerpo de la
+ventana con `render` y mantenla en pantalla con `useWindowPresence` — ver
+[Animación](/es/docs/animation).
+
 ## Foco y apilado
 
 Pulsar en cualquier punto de una ventana la trae al frente, y también lo hace

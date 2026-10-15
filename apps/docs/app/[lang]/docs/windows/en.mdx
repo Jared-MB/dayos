@@ -181,6 +181,10 @@ a plain `close()` unmounts it as usual.
 A handler of your own that calls `preventDefault()` also stops it, which is how
 a window with unsaved changes asks first.
 
+Closing is instant by default. To animate it, swap the window's body with
+`render` and hold the window on screen with `useWindowPresence` — see
+[Animation](/docs/animation).
+
 ## Focus and stacking
 
 Clicking anywhere in a window brings it to the front, and so does focusing
