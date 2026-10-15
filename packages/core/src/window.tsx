@@ -12,7 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Rnd, type RndDragEvent } from "react-rnd";
-import { useDesktop, useDesktopApp } from "./desktop";
+import { useDesktop, useDesktopApp, useIsWindowKept } from "./desktop";
 import { cn, mergeProps, type RenderProp, renderSlot } from "./utils";
 
 const DEFAULT_CASCADE_OFFSET = 32;
@@ -110,6 +110,8 @@ export type WindowProps = {
   /**
    * Keeps the window mounted when it's closed. Without this, closing unmounts
    * the subtree and all of its state goes with it (scroll, forms, playback).
+   * To keep it for a single close instead (a minimize), pass `keepMounted` to
+   * `close` or `closeWindow`.
    */
   keepMounted?: boolean;
   closeOnEscape?: boolean;
@@ -123,7 +125,8 @@ export type WindowProps = {
 
 export function Window({ keepMounted = false, ...props }: WindowProps) {
   const { desktopEl } = useDesktop();
-  const { isWindowOpen } = useDesktopApp();
+  const { id, isWindowOpen } = useDesktopApp();
+  const isKept = useIsWindowKept(id);
 
   // With `keepMounted` the window mounts the first time it opens and not
   // before: mounting them all up front would pay for rendering apps that may
@@ -134,7 +137,9 @@ export function Window({ keepMounted = false, ...props }: WindowProps) {
     if (isWindowOpen) setHasBeenOpen(true);
   }, [isWindowOpen]);
 
-  const shouldMount = keepMounted ? hasBeenOpen : isWindowOpen;
+  // A `closeWindow(id, { keepMounted: true })` keeps it for that one close,
+  // the prop keeps it for every close.
+  const shouldMount = isWindowOpen || (hasBeenOpen && (keepMounted || isKept));
 
   if (!shouldMount) return null;
 
@@ -569,6 +574,27 @@ export function WindowExpand({
       onClick={(event) => {
         onClick?.(event);
         if (!event.defaultPrevented) toggleMaximize();
+      }}
+      {...props}
+    />
+  );
+}
+
+/**
+ * `WindowClose` with `keepMounted`: hides the window and keeps its state until
+ * it opens again. Lives next to `WindowClose` and not as a flag on it because
+ * a header with both buttons is the usual case, and each one needs its own
+ * accessible name.
+ */
+export function WindowMinimize({ onClick, ...props }: WindowActionProps) {
+  const { close } = useDesktopApp();
+
+  return (
+    <WindowAction
+      aria-label="Minimize window"
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) close({ keepMounted: true });
       }}
       {...props}
     />

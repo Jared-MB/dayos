@@ -2,12 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { type DocPage, PAGES, SECTIONS } from "../_lib/nav";
+import { type DocPage, type DocSection, pageHref } from "../_lib/nav";
+import { useDictionary, useLocale } from "./locale-provider";
 
 /**
- * Search across the docs, over the same registry the sidebar renders. There are
- * a couple of dozen pages, so the whole index is a handful of strings and the
- * matching can happen on every keystroke without anyone noticing.
+ * Search across the docs, over the same list the sidebar renders — titles,
+ * descriptions and keywords, all of them written at the top of the page they
+ * belong to. There are a couple of dozen pages, so the whole index is a handful
+ * of strings and the matching can happen on every keystroke without anyone
+ * noticing.
  *
  * No index to build and no service to call: the tradeoff is that it searches
  * titles, descriptions and keywords rather than the body of each page. For a
@@ -15,11 +18,14 @@ import { type DocPage, PAGES, SECTIONS } from "../_lib/nav";
  * finding the paragraph it appears in, and the first is what the reader wants
  * from a jump-to-page box.
  */
-type Result = { page: DocPage; section: string; score: number };
+type Entry = { page: DocPage; section: string };
+type Result = Entry & { score: number };
 
-const sectionOf = (href: string) =>
-  SECTIONS.find((section) => section.pages.some((page) => page.href === href))
-    ?.title ?? "";
+/** Every page, each remembering the heading it was listed under. */
+const index = (sections: readonly DocSection[]): readonly Entry[] =>
+  sections.flatMap((section) =>
+    section.pages.map((page) => ({ page, section: section.title })),
+  );
 
 /**
  * How well a page answers a query. A hit in the title beats one in the
@@ -28,7 +34,7 @@ const sectionOf = (href: string) =>
  */
 const score = (page: DocPage, query: string) => {
   const title = page.title.toLowerCase();
-  const description = page.description.toLowerCase();
+  const description = page.description?.toLowerCase() ?? "";
   const keywords = page.keywords?.join(" ").toLowerCase() ?? "";
 
   if (title === query) return 100;
@@ -40,7 +46,9 @@ const score = (page: DocPage, query: string) => {
   return 0;
 };
 
-export function Search() {
+export function Search({ sections }: { sections: readonly DocSection[] }) {
+  const locale = useLocale();
+  const d = useDictionary();
   const [isOpen, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
@@ -50,26 +58,20 @@ export function Search() {
 
   const results = useMemo<Result[]>(() => {
     const trimmed = query.trim().toLowerCase();
+    const entries = index(sections);
 
     // With an empty box, offer the pages rather than nothing: opening the
     // palette and seeing the docs' shape is a reasonable way to use it.
     if (!trimmed) {
-      return PAGES.slice(0, 8).map((page) => ({
-        page,
-        section: sectionOf(page.href),
-        score: 0,
-      }));
+      return entries.slice(0, 8).map((entry) => ({ ...entry, score: 0 }));
     }
 
-    return PAGES.map((page) => ({
-      page,
-      section: sectionOf(page.href),
-      score: score(page, trimmed),
-    }))
+    return entries
+      .map((entry) => ({ ...entry, score: score(entry.page, trimmed) }))
       .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
-  }, [query]);
+  }, [query, sections]);
 
   // The selection has to come back into range when the results change: typing
   // one more character can leave it pointing past the end of a shorter list.
@@ -152,7 +154,7 @@ export function Search() {
       const result = results[selected];
       if (result) {
         event.preventDefault();
-        go(result.page.href);
+        go(pageHref(locale, result.page.href));
       }
     }
   };
@@ -165,7 +167,7 @@ export function Search() {
         type="button"
       >
         <SearchIcon />
-        <span className="search-trigger-text">Search docs...</span>
+        <span className="search-trigger-text">{d.search.trigger}</span>
         <kbd className="search-kbd">⌘K</kbd>
       </button>
 
@@ -176,7 +178,7 @@ export function Search() {
           <div className="search-backdrop" onClick={() => setOpen(false)} />
 
           <div
-            aria-label="Search documentation"
+            aria-label={d.search.dialogLabel}
             aria-modal="true"
             className="search-dialog"
             role="dialog"
@@ -192,18 +194,18 @@ export function Search() {
                 className="search-input"
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={onInputKeyDown}
-                placeholder="Search documentation..."
+                placeholder={d.search.placeholder}
                 ref={inputRef}
                 role="combobox"
                 aria-expanded="true"
                 type="text"
                 value={query}
               />
-              <kbd className="search-kbd">Esc</kbd>
+              <kbd className="search-kbd">{d.search.escape}</kbd>
             </div>
 
             {results.length === 0 ? (
-              <p className="search-empty">No results for “{query.trim()}”</p>
+              <p className="search-empty">{d.search.empty(query.trim())}</p>
             ) : (
               /*
                 A div and not a ul: the options are the buttons themselves, and
@@ -223,7 +225,7 @@ export function Search() {
                     data-selected={index === selected ? "" : undefined}
                     id={`search-${index}`}
                     key={result.page.href}
-                    onClick={() => go(result.page.href)}
+                    onClick={() => go(pageHref(locale, result.page.href))}
                     onMouseEnter={() => setSelected(index)}
                     role="option"
                     type="button"

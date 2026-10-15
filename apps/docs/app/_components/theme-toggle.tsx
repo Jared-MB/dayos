@@ -1,72 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-type Theme = "light" | "dark";
-
-/**
- * The script that runs before the first paint. It has to be inline and blocking
- * — anything later and the page paints in the wrong theme first, which is the
- * white flash every dark-mode site has to earn its way out of.
- *
- * It only writes `data-theme` when there is a stored choice. With none, the
- * attribute stays absent and the CSS falls through to `prefers-color-scheme`,
- * so the system preference is the default rather than something copied into
- * storage on first visit.
- */
-export const THEME_SCRIPT = `
-try {
-  var stored = localStorage.getItem("dayos-theme");
-  if (stored === "light" || stored === "dark") {
-    document.documentElement.dataset.theme = stored;
-  }
-} catch (error) {}
-`;
+import { useTheme } from "next-themes";
+import { useDictionary } from "./locale-provider";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>();
+  const d = useDictionary();
+  const { resolvedTheme, setTheme } = useTheme();
 
-  // Read after mount, never during render: the server has no way to know what
-  // is in this browser's storage, and guessing is a hydration mismatch.
-  useEffect(() => {
-    const stored = document.documentElement.dataset.theme;
-
-    if (stored === "light" || stored === "dark") {
-      setTheme(stored);
-      return;
-    }
-
-    setTheme(
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light",
-    );
-  }, []);
-
-  const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-
-    try {
-      localStorage.setItem("dayos-theme", next);
-    } catch {
-      // Storage can be unavailable (private mode, a blocked third-party
-      // context). The theme still changes for this page; it just will not be
-      // remembered, which beats failing the click.
-    }
-  };
+  // Undefined until `next-themes` has read the browser's preference after
+  // mount: the server has no way to know what is in this browser's storage,
+  // and guessing is a hydration mismatch. The label the server renders is the
+  // light-theme one, matching the stylesheet's own default.
+  const toggle = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
 
   return (
     <button
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+      suppressHydrationWarning
+      aria-label={resolvedTheme === "dark" ? d.theme.toLight : d.theme.toDark}
       className="icon-button"
       onClick={toggle}
       type="button"
     >
-      {/* Both icons ship, and CSS picks. Until the effect has run there is no
-          theme to render, and swapping icons on hydration would flicker. */}
+      {/* Both icons ship, and CSS picks. Swapping them in JavaScript would
+          render the wrong one until hydration. */}
       <SunIcon />
       <MoonIcon />
     </button>

@@ -1,0 +1,56 @@
+---
+title: Problemas comunes
+keywords: iframe, arrastre, ventana atascada, escritorio colapsado, css
+  estructural, pointer-events
+---
+
+## El escritorio se colapsa y recorta todas las ventanas
+
+DayOS solo le da tamaño a una ventana si tú se lo das al escritorio. El
+escritorio es `position: relative` y nada más, así que sin altura se colapsa y
+todas las ventanas que hay dentro quedan recortadas.
+
+```css
+.desktop {
+  height: 100dvh;
+  background: linear-gradient(140deg, #1e3a5f, #0f172a 60%, #312e81);
+}
+```
+
+## La ventana se atasca o se queda pegada al puntero sobre un iframe
+
+Mientras se arrastra una ventana, un iframe bajo el cursor se traga los
+`mousemove` y `mouseup` que el arrastre escucha en el documento — así que la
+ventana deja de seguir al puntero, o se queda pegada a él después de soltar el
+ratón.
+
+El escritorio lleva `data-interacting` siempre que se está arrastrando o
+redimensionando una ventana, que es justo el rato en el que hay que neutralizar
+los iframes:
+
+```css
+.desktop[data-interacting] iframe {
+  pointer-events: none;
+}
+```
+
+O en Tailwind, sobre el propio escritorio:
+
+```tsx
+<Desktop className="[&[data-interacting]_iframe]:pointer-events-none" />
+```
+
+Merece la pena añadirla desde el principio si tus ventanas pueden llegar a
+contener un iframe: un mapa incrustado, un vídeo, la vista previa de otra
+página. Nada falla hasta que el primer arrastre pasa por encima de uno.
+
+## En otras páginas
+
+<Cards>
+  <Card href="/es/docs/desktop-and-apps" title="Escritorio y apps">
+    Qué define el escritorio, incluido `data-interacting`.
+  </Card>
+  <Card href="/es/docs/styling" title="Estilos">
+    Todos los atributos de estado contra los que puedes estilar.
+  </Card>
+</Cards>

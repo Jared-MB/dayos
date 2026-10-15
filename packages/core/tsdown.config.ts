@@ -1,6 +1,6 @@
 import { defineConfig } from "tsdown";
 
-export default defineConfig({
+export default defineConfig(({ watch }) => ({
   entry: ["src/index.ts"],
   format: "esm",
   dts: true,
@@ -21,6 +21,16 @@ export default defineConfig({
   // silently rename `dist/index.mjs` to `dist/index.js` — out from under the
   // `exports` map, which is how the package resolves at all.
   fixedExtension: true,
+
+  // `dist` is what the `exports` map points at, so deleting it is deleting the
+  // package: tsdown cleans the output directory before every build, and in
+  // `--watch` that leaves a ~1s window per rebuild where `dist/index.mjs`
+  // doesn't exist. A dev server resolving the workspace link straight to that
+  // file — Vite, again — lands in the window on the very save that triggered
+  // the rebuild, and reports the package as unresolvable. Overwriting in place
+  // keeps the entry readable throughout. One-shot builds still clean, so a
+  // renamed entry can't leave a stale sibling behind in a published `dist`.
+  clean: !watch,
   // `react-rnd` is an implementation detail, and shipping it as a runtime
   // dependency makes it the consumer's problem: `react-draggable` reads
   // `process.env.DRAGGABLE_DEBUG` on every drag start, which is a bare
@@ -56,4 +66,4 @@ export default defineConfig({
     // names costs ~0.5 kB gzipped.
     mangle: { keepNames: true },
   },
-});
+}));

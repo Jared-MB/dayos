@@ -1,3 +1,5 @@
+import { isValidElement, type ReactNode } from "react";
+import { parseFenceMeta } from "../_lib/fence-meta";
 import { type Language, tokenize } from "../_lib/highlight";
 import { CopyButton } from "./copy-button";
 
@@ -43,7 +45,11 @@ export function CodeBlock({
         <CopyButton className="code-copy-floating" text={code} />
       )}
 
-      <pre className="code-pre">
+      {/*
+        Source, so it is read and not translated: a browser asked to translate
+        the page would otherwise rewrite the identifiers inside it.
+      */}
+      <pre className="code-pre" translate="no">
         {/*
           A diff lays its lines out as grid rows, which is what the stylesheet
           keys off. The line break between rows is the grid's doing, so the
@@ -88,7 +94,50 @@ function Tokens({ code, language }: { code: string; language: Language }) {
   );
 }
 
+/**
+ * A fenced block, as MDX hands it over: a `<pre>` wrapping a `<code>`, with the
+ * language and the words after it on the fence carried across by the rehype
+ * plugin in `mdx/rehype-code-meta.mjs`.
+ *
+ * This is what `pre` maps to, so a page writes a code block the way any
+ * Markdown file does and still gets the filename tab, the diff markers and the
+ * copy button.
+ */
+export function CodeFence({
+  children,
+  "data-language": language,
+  "data-meta": meta,
+}: {
+  children?: ReactNode;
+  "data-language"?: string;
+  "data-meta"?: string;
+}) {
+  return (
+    <CodeBlock
+      language={(language ?? "tsx") as Language}
+      {...parseFenceMeta(meta)}
+    >
+      {fenceText(children)}
+    </CodeBlock>
+  );
+}
+
+/** The source inside the `<code>` element, which is a string and nothing else. */
+function fenceText(children: ReactNode): string {
+  if (typeof children === "string") return children;
+
+  if (isValidElement(children)) {
+    return fenceText((children.props as { children?: ReactNode }).children);
+  }
+
+  return "";
+}
+
 /** Inline code with a language, for the odd `<Window keepMounted />` in prose. */
 export function InlineCode({ children }: { children: string }) {
-  return <code className="inline-code">{children}</code>;
+  return (
+    <code className="inline-code" translate="no">
+      {children}
+    </code>
+  );
 }

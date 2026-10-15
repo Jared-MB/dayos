@@ -3,17 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SECTIONS } from "../_lib/nav";
+import { type DocSection, pageHref } from "../_lib/nav";
+import { useDictionary, useLocale } from "./locale-provider";
 
 /**
  * The docs navigation. It is a client component for one reason: the current
  * page has to be marked, and only the browser knows which one that is.
  *
+ * The list arrives as a prop rather than being looked up here. Every title in
+ * it is read from the top of a page's `.mdx`, which only the server can do —
+ * and handing over the finished list means what crosses to the browser is a
+ * few dozen strings rather than the pages they came from.
+ *
  * On a narrow screen it becomes a drawer. The markup does not change between
  * the two — the same list, moved by CSS — so a link is never rendered twice and
  * the focus order stays what it looks like.
  */
-export function Sidebar() {
+export function Sidebar({ sections }: { sections: readonly DocSection[] }) {
+  const locale = useLocale();
+  const d = useDictionary();
   const pathname = usePathname();
   const [isOpen, setOpen] = useState(false);
 
@@ -50,7 +58,7 @@ export function Sidebar() {
         type="button"
       >
         <MenuIcon />
-        Menu
+        {d.sidebar.menu}
       </button>
 
       {/*
@@ -66,18 +74,22 @@ export function Sidebar() {
       />
 
       <aside
-        aria-label="Documentation"
+        aria-label={d.sidebar.label}
         className="sidebar"
         data-open={isOpen ? "" : undefined}
         id="docs-sidebar"
       >
         <nav className="sidebar-nav">
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <div className="sidebar-section" key={section.title}>
               <p className="sidebar-section-title">{section.title}</p>
               <ul className="sidebar-list">
                 {section.pages.map((page) => {
-                  const isActive = pathname === page.href;
+                  // The stored href has no language on it; the address in the
+                  // bar does. Comparing the two directly would leave every
+                  // link unmarked in every language but the default.
+                  const href = pageHref(locale, page.href);
+                  const isActive = pathname === href;
 
                   return (
                     <li key={page.href}>
@@ -85,7 +97,7 @@ export function Sidebar() {
                         aria-current={isActive ? "page" : undefined}
                         className="sidebar-link"
                         data-active={isActive ? "" : undefined}
-                        href={page.href}
+                        href={href}
                       >
                         {page.title}
                       </Link>

@@ -1,0 +1,238 @@
+---
+title: Rutas dinámicas
+keywords: patrón, params, useDynamicWindows, slug, :file, dinámicas
+---
+
+Al igual que en Next una ruta estática se puede prerenderizar normalmente, pero un patrón sirve por tantas ventanas como URL se
+visiten, una por documento, tarea o registro, lo que significa que no se puede renderizar a partir de una lista como sí se 
+puede con una ruta estática. 
+
+Para eso está el hook `useDynamicWindows`, que devuelve las ventanas que un patrón tiene abiertas en ese momento, 
+con los params a los que se resolvió cada una.
+
+## Declarar un patrón
+
+Un segmento escrito `:asi` coincide con cualquier cosa. Estos patrones se declaran en el
+mismo array `routes` que todas las demás rutas:
+
+```tsx title="app/shell.tsx"
+const ROUTES = [
+  "/",
+  "/documents",
+  "/documents/:file",
+] as const;
+```
+
+<Callout>
+  Esta es la sintaxis propia de DayOS y no tiene nada que ver con los nombres de
+  carpeta de Next. Next va a seguir buscando `app/documents/[file]/page.tsx` en tu árbol de archivos, y;
+  la forma con dos puntos es la forma en que el escritorio sabe que esta ruta es dinámica.
+</Callout>
+
+## Renderizar una app por ventana abierta
+
+`useDynamicWindows` devuelve las ventanas que un patrón tiene abiertas en ese
+momento, con los params a los que se resolvió cada una:
+
+```tsx title="app/shell.tsx" added="4,7-8"
+import { useDynamicWindows, type RouteParams } from "@dayos/next";
+
+function DocumentApps() {
+  const windows = useDynamicWindows("/documents/:file");
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell title={params.file} />
+    </DesktopApp>
+  ));
+}
+```
+
+### Por qué vienen los params
+
+La coincidencia ya averiguó qué representaba `:file`. Si no se devolvieran, cada
+consumidor tendría que despiezar el href otra vez para recuperar lo que el
+patrón acababa de decirle. Llegan decodificados, como los params de una página
+de Next, así que la ventana recibe el nombre de la cosa y no su forma escrita en
+la URL.
+
+```tsx
+function DocumentApps() {
+  const windows = useDynamicWindows("/documents/:file");
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <DocumentShell title={findDocument(params.file)?.name ?? params.file} />
+    </DesktopApp>
+  ));
+}
+```
+
+## Abrir una ventana
+
+Debido a que ya conectamos las ventanas a nuestro enrutador con Next, 
+abrir una ventana es tan fácil como navegar a la URL que la representa.
+
+```tsx title="app/documents/page.tsx"
+export default function DocumentsPage() {
+  return (
+    <ul>
+      {DOCUMENTS.map(({ file, name }) => (
+        <li key={file}>
+          <Link href={`/documents/${file}`}>{name}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Anidamiento
+
+Los patrones se anidan tan profundo como quieras, y cada nivel es una
+declaración aparte:
+
+```tsx
+
+/**
+ * Los proyectos se anidan hasta tres niveles, con una ruta estática junto a la
+ * dinámica en cada nivel por debajo del primero: `/projects/archive` compite con
+ * `/projects/:project` y `/projects/:project/new` con `/projects/:project/:task`.
+ * El escritorio elige la ruta más específica, de modo que la literal gana en la
+ * profundidad en la que aparece.
+ */
+const PROJECT_PATTERN = "/projects/:project";
+const NEW_TASK_PATTERN = "/projects/:project/new";
+const TASK_PATTERN = "/projects/:project/:task";
+
+/**
+ * Un patrón representa tantas ventanas como URLs visitadas, por lo que no se
+ * puede renderizar a partir de la lista como una ruta simple. `/projects/:project/new`
+ * pertenece aquí a pesar de terminar en un literal: sigue teniendo un parámetro,
+ * así que es una ventana por proyecto y no una sola ventana.
+ */
+const PATTERNS: readonly string[] = [
+  DOCUMENT_PATTERN,
+  PROJECT_PATTERN,
+  NEW_TASK_PATTERN,
+  TASK_PATTERN,
+];
+
+const ROUTES = [
+  "/projects",
+  "/projects/archive",
+  PROJECT_PATTERN,
+  NEW_TASK_PATTERN,
+  TASK_PATTERN,
+] as const;
+
+const STATIC_ROUTES = ROUTES.filter((route) => !PATTERNS.includes(route));
+```
+
+```tsx
+function PatternApps({
+  pattern,
+  title,
+  ...geometry
+}: {
+  pattern: string;
+  /**
+   * El nombre de la ventana, tomado de los parámetros que rellenó el patrón en
+   * lugar de volver a descomponer el href: la coincidencia ya determinó de qué
+   * elemento se trata.
+   */
+  title: (params: RouteParams) => string | undefined;
+} & Pick<
+  React.ComponentProps<typeof Window>,
+  "defaultPosition" | "defaultSize"
+>) {
+  const windows = useDynamicWindows(pattern);
+
+  return windows.map(({ href, params }) => (
+    <DesktopApp id={href} key={href}>
+      <PatternShell title={title(params)} {...geometry} />
+    </DesktopApp>
+  ));
+}
+
+/**
+ * Sin icono: un documento o una tarea no tiene un lugar fijo en el escritorio.
+ * Se abre desde la lista que está encima.
+ */
+function PatternShell({
+  title,
+  ...geometry
+}: { title: string | undefined } & Pick<
+  React.ComponentProps<typeof Window>,
+  "defaultPosition" | "defaultSize"
+>) {
+  const content = useWindowRoute();
+
+  return (
+    <Window className="window" keepMounted {...geometry}>
+      <WindowHeader className="window-header">
+        <WindowName className="window-title">{title}</WindowName>
+        <WindowActions className="window-actions">
+          <WindowMinimize className="window-button">–</WindowMinimize>
+          <WindowExpand className="window-button">▢</WindowExpand>
+          <WindowClose className="window-button">✕</WindowClose>
+        </WindowActions>
+      </WindowHeader>
+      <WindowContent className="window-content">{content}</WindowContent>
+    </Window>
+  );
+}
+```
+
+Escalona la geometría para que abrir una tras otra las deje todas visibles a la
+vez:
+
+```tsx
+<WindowRouteProvider content={children} routes={ROUTES}>
+  <RoutedDesktop className="desktop">
+    {STATIC_ROUTES.map((href) => (
+      <RoutedApp href={href} key={href} />
+    ))}
+    <PatternApps
+      defaultPosition={{ x: 180, y: 120 }}
+      pattern="/projects/:project"
+    />
+    <PatternApps
+      defaultPosition={{ x: 300, y: 240 }}
+      pattern="/projects/:project/:task"
+    />
+  </RoutedDesktop>
+</WindowRouteProvider>
+```
+
+<Callout
+  type="warning"
+  title="Un patrón con un último segmento literal sigue siendo un patrón"
+>
+  `/projects/:project/new` acaba en un literal, pero sigue teniendo un param,
+  así que es una ventana por proyecto en lugar de una sola ventana, esto hace
+  que pertenezca a los patrones y no a la lista de rutas estáticas.
+</Callout>
+
+## Partir la lista
+
+Las rutas estáticas se renderizan una a una; los patrones se renderizan por
+instancia. Derivar la primera lista de la segunda evita que se separen:
+
+```tsx title="app/shell.tsx"
+const PATTERNS: readonly string[] = [
+  "/documents/:file",
+  "/projects/:project",
+  "/projects/:project/new",
+  "/projects/:project/:task",
+];
+
+const STATIC_ROUTES = ROUTES.filter((route) => !PATTERNS.includes(route));
+```
+
+## Lo que un patrón no reclama
+
+Del hook solo vuelven las ventanas que el patrón posee. Declarar
+`/documents/new` junto a `/documents/:file` deja esa fuera de la lista: su
+ventana pertenece a la ruta concreta, no al patrón. Qué ruta gana es la
+[coincidencia de rutas](/es/docs/routing/matching).

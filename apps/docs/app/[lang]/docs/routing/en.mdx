@@ -1,0 +1,223 @@
+---
+title: Windows with URLs
+description: Give every window a route of its own with the Next App Router
+  adapter.
+keywords: "@dayos/next, next, app router, url, link"
+---
+
+`@dayos/next` gives every window a URL. It is the only piece of DayOS that talks
+to Next, and it is genuinely optional: a desktop without it works the same, on a
+single page.
+
+## What it buys you
+
+- Requesting `/about` returns HTML that **already has** the About window open
+  with its content inside. No flash of an empty desktop, and indexable.
+- Focusing a window updates the URL, so a window can be shared by link. It uses
+  `replace`, so the back button walks through pages rather than through focus
+  changes.
+- A window that loses focus keeps its own content instead of switching to the
+  current route’s.
+
+## Setup
+
+<Steps>
+
+<Step title="Install">
+
+```bash
+pnpm add @dayos/core @dayos/next
+```
+
+</Step>
+
+<Step title="Hand the layout's children to the provider">
+
+The current route’s content goes in as a prop rather than as a child. That is
+the whole trick: the window it belongs to claims it from the inside, instead of
+it sitting loose on the desktop.
+
+```tsx title="app/layout.tsx"
+import { Shell } from "./shell";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <Shell>{children}</Shell>
+      </body>
+    </html>
+  );
+}
+```
+
+</Step>
+
+<Step title="Declare every route up front">
+
+The provider needs the full list during render — that is how the server knows
+which window the requested URL belongs to. A window that registered itself from
+an effect would always be too late.
+
+```tsx title="app/shell.tsx"
+"use client";
+
+import { DesktopApp, DesktopIcon, Window, WindowContent } from "@dayos/core";
+import { RoutedDesktop, useWindowRoute, WindowRouteProvider } from "@dayos/next";
+
+const ROUTES = ["/", "/about"] as const;
+
+export function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <WindowRouteProvider content={children} routes={ROUTES}>
+      <RoutedDesktop className="desktop">
+        {ROUTES.map((href) => (
+          <App href={href} key={href} />
+        ))}
+      </RoutedDesktop>
+    </WindowRouteProvider>
+  );
+}
+```
+
+</Step>
+
+<Step title="Make each window's id its href">
+
+A window’s href _is_ its `DesktopApp` id — one identity, declared once, rather
+than the same string written in two places and kept in sync by hand.
+
+```tsx title="app/shell.tsx"
+function App({ href }: { href: string }) {
+  return (
+    <DesktopApp id={href}>
+      <AppShell href={href} />
+    </DesktopApp>
+  );
+}
+
+function AppShell({ href }: { href: string }) {
+  // This window's content: live while it is the current route, frozen once
+  // focus moves elsewhere.
+  const content = useWindowRoute();
+
+  return (
+    <>
+      <DesktopIcon>{href}</DesktopIcon>
+      <Window keepMounted>
+        <WindowContent>{content}</WindowContent>
+      </Window>
+    </>
+  );
+}
+```
+
+<Callout>
+  `useWindowRoute` has to be called inside the `DesktopApp`, not in the component
+  that renders it — that is where the id it reads lives. Hence the split into
+  `App` and `AppShell` above.
+</Callout>
+
+</Step>
+
+<Step title="Add the pages">
+
+Ordinary Next pages. They stay server components, and nothing about them knows
+it is being rendered inside a window.
+
+```tsx title="app/about/page.tsx"
+export default function AboutPage() {
+  return (
+    <article>
+      <h1>About</h1>
+      <p>This window is a real route.</p>
+    </article>
+  );
+}
+```
+
+</Step>
+
+</Steps>
+
+## How the sync works
+
+### URL to window
+
+Landing on a route opens its window. Navigating to a URL that belongs to another
+window opens that one — and deliberately does not close the first, since
+focusing a window changes the URL and has no business closing anything.
+
+### Window to URL
+
+The front window is the URL. `RoutedDesktop` owns this sync alone, and uses
+`replace` with `scroll: false`: a focus change is not a navigation, so it should
+not fill the history and it should not move the viewport.
+
+Each window’s last real URL is remembered, query string and hash included.
+Coming back to a window returns you to the URL it had, not to its bare href.
+
+### When the last window closes
+
+The URL goes to `exitHref`, which defaults to `"/"`:
+
+```tsx
+<RoutedDesktop exitHref="/welcome" />
+```
+
+## Windows without routes
+
+Not every app has to be routed. A `DesktopApp` with an id that no route claims —
+or with no id at all — is an ordinary window: it opens, it focuses, and it
+leaves the URL alone.
+
+```tsx
+<RoutedDesktop className="desktop">
+  {ROUTES.map((href) => (
+    <App href={href} key={href} />
+  ))}
+
+  {/* Not a route. Opening it does not change the URL. */}
+  <DesktopApp id="calculator">
+    <DesktopIcon>Calculator</DesktopIcon>
+    <Window>
+      <WindowContent>
+        <Calculator />
+      </WindowContent>
+    </Window>
+  </DesktopApp>
+</RoutedDesktop>
+```
+
+## Opening a window from a link
+
+There is no imperative API for this and there does not need to be one. A
+window’s href is a URL, so an ordinary `Link` opens it:
+
+```tsx
+import Link from "next/link";
+
+<Link href="/about">About</Link>
+```
+
+Which is also why an icon is often a link — it opens the window on double click,
+and gives the URL to anyone who wants to copy it.
+
+```tsx
+<DesktopIcon render={<Link href={href} />}>
+  <DesktopIconText>{title}</DesktopIconText>
+</DesktopIcon>
+```
+
+<Cards>
+  <Card href="/docs/routing/dynamic-routes" title="Dynamic Routes">
+    One declaration, a window per document.
+  </Card>
+  <Card href="/docs/routing/matching" title="Route Matching">
+    Which window a URL belongs to when several could claim it.
+  </Card>
+</Cards>

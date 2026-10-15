@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { markdownHref, markdownUrl } from "../_lib/nav";
+import { useDictionary, useLocale } from "./locale-provider";
 
 /**
  * The page, for something that is not reading it on the page.
@@ -18,6 +19,8 @@ import { markdownHref, markdownUrl } from "../_lib/nav";
  * should pay for it.
  */
 export function CopyPage({ href }: { href: string }) {
+  const locale = useLocale();
+  const d = useDictionary();
   const [isOpen, setOpen] = useState(false);
   const [state, setState] = useState<"idle" | "copying" | "copied">("idle");
   const root = useRef<HTMLDivElement>(null);
@@ -76,7 +79,7 @@ export function CopyPage({ href }: { href: string }) {
     setState("copying");
 
     try {
-      const response = await fetch(markdownHref(href));
+      const response = await fetch(markdownHref(locale, href));
 
       if (!response.ok) throw new Error(`${response.status}`);
 
@@ -127,8 +130,8 @@ export function CopyPage({ href }: { href: string }) {
     items[next]?.focus();
   };
 
-  const url = markdownUrl(href);
-  const ask = `Read ${url} so I can ask questions about it.`;
+  const url = markdownUrl(locale, href);
+  const ask = d.copyPage.ask(url);
 
   return (
     <div className="copy-page" ref={root}>
@@ -150,13 +153,13 @@ export function CopyPage({ href }: { href: string }) {
         {/* The label does not change with the state: a button whose width moves
             under the cursor is a button that gets missed on the second press.
             What happened is said beside it, once, to whoever is listening. */}
-        <span>Copy page</span>
+        <span>{d.copyPage.copy}</span>
       </button>
 
       <button
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        aria-label="More ways to read this page"
+        aria-label={d.copyPage.more}
         className="copy-page-toggle"
         onClick={() => (isOpen ? close(false) : open("first"))}
         onKeyDown={(event) => {
@@ -190,31 +193,31 @@ export function CopyPage({ href }: { href: string }) {
           role="menu"
         >
           <MenuItem
-            description="Open this page in Markdown"
-            href={markdownHref(href)}
+            description={d.copyPage.markdownDescription}
+            href={markdownHref(locale, href)}
             icon={<MarkdownIcon />}
-            label="View as Markdown"
+            label={d.copyPage.markdown}
             onSelect={() => close(false)}
           />
           <MenuItem
-            description="Ask questions about this page"
+            description={d.copyPage.askDescription}
             href={`https://claude.ai/new?q=${encodeURIComponent(ask)}`}
             icon={<ExternalIcon />}
-            label="Open in Claude"
+            label={d.copyPage.claude}
             onSelect={() => close(false)}
           />
           <MenuItem
-            description="Ask questions about this page"
+            description={d.copyPage.askDescription}
             href={`https://chatgpt.com/?q=${encodeURIComponent(ask)}`}
             icon={<ExternalIcon />}
-            label="Open in ChatGPT"
+            label={d.copyPage.chatgpt}
             onSelect={() => close(false)}
           />
         </div>
       ) : null}
 
       <p aria-live="polite" className="visually-hidden">
-        {state === "copied" ? "Page copied as Markdown" : ""}
+        {state === "copied" ? d.copyPage.copied : ""}
       </p>
     </div>
   );

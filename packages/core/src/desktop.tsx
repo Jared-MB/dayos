@@ -17,6 +17,16 @@ import {
   useControllableState,
 } from "./utils";
 
+export type CloseWindowOptions = {
+  /**
+   * Keeps the window mounted and hidden instead of unmounting it, so its state
+   * survives until it opens again: a minimize. It applies to this close only;
+   * for a window that should always survive closing, use the `Window`'s
+   * `keepMounted` prop.
+   */
+  keepMounted?: boolean;
+};
+
 type DesktopContextType = {
   /**
    * The desktop node. It's `null` on the first render and gets populated on
@@ -28,7 +38,7 @@ type DesktopContextType = {
   openWindows: string[];
   activeWindowId?: string;
   openWindow: (id: string) => void;
-  closeWindow: (id: string) => void;
+  closeWindow: (id: string, options?: CloseWindowOptions) => void;
   focusWindow: (id: string) => void;
   /** Some window is being dragged or resized right now. */
   isInteracting: boolean;
@@ -59,6 +69,15 @@ const moveToFront = (windows: string[], id: string) => [
 const AppRegistryContext = createContext<((id: string) => () => void) | null>(
   null,
 );
+
+/**
+ * Closed windows that were closed with `keepMounted`. Internal for the same
+ * reason as the registry: only `Window` reads it.
+ */
+const KeptWindowsContext = createContext<string[]>([]);
+
+export const useIsWindowKept = (id: string) =>
+  useContext(KeptWindowsContext).includes(id);
 
 export type DesktopProps = Omit<React.ComponentProps<"div">, "children"> & {
   children?: React.ReactNode;
@@ -102,13 +121,42 @@ export function Desktop({
     [setOpenWindows],
   );
 
+  const [keptWindows, setKeptWindows] = useState<string[]>([]);
+
   const closeWindow = useCallback(
-    (id: string) =>
-      setOpenWindows((prev) =>
-        prev.includes(id) ? prev.filter((w) => w !== id) : prev,
-      ),
+    (id: string, options?: CloseWindowOptions) =>
+      setOpenWindows((prev) => {
+        if (!prev.includes(id)) return prev;
+
+        // Inside the updater because that's the only place that knows the
+        // window was actually open: closing one that's already closed mustn't
+        // bring it back as a hidden mount. `useControllableState` runs the
+        // updater synchronously, so this is a plain call and not a side effect
+        // inside a React updater.
+        const keep = options?.keepMounted === true;
+        setKeptWindows((kept) =>
+          kept.includes(id) === keep
+            ? kept
+            : keep
+              ? [...kept, id]
+              : kept.filter((w) => w !== id),
+        );
+
+        return prev.filter((w) => w !== id);
+      }),
     [setOpenWindows],
   );
+
+  // An open window isn't kept: the flag belongs to the close that set it. It's
+  // dropped by watching the state rather than inside `openWindow` because a
+  // controlled desktop can reopen a window without going through it, and a
+  // stale flag would keep the next close mounted too.
+  useEffect(() => {
+    setKeptWindows((kept) => {
+      const next = kept.filter((w) => !openWindows.includes(w));
+      return next.length === kept.length ? kept : next;
+    });
+  }, [openWindows]);
 
   const focusWindow = useCallback(
     (id: string) =>
@@ -210,9 +258,11 @@ export function Desktop({
   return (
     <DesktopContext value={value}>
       <AppRegistryContext value={registerApp}>
-        {renderSlot(render, elementProps, (finalProps) => (
-          <div {...(finalProps as React.ComponentProps<"div">)} />
-        ))}
+        <KeptWindowsContext value={keptWindows}>
+          {renderSlot(render, elementProps, (finalProps) => (
+            <div {...(finalProps as React.ComponentProps<"div">)} />
+          ))}
+        </KeptWindowsContext>
       </AppRegistryContext>
     </DesktopContext>
   );
@@ -222,7 +272,11 @@ type DesktopAppContextType = {
   id: string;
   isWindowOpen: boolean;
   open: () => void;
-  close: () => void;
+  /**
+   * Also takes an event so `onClick={close}` keeps working: an event isn't
+   * options, and the close goes through as a plain one.
+   */
+  close: (options?: CloseWindowOptions | React.SyntheticEvent) => void;
   focus: () => void;
 };
 
@@ -301,7 +355,11 @@ export function DesktopApp({
       id,
       isWindowOpen,
       open: () => openWindow(id),
-      close: () => closeWindow(id),
+      close: (options?: CloseWindowOptions | React.SyntheticEvent) =>
+        closeWindow(
+          id,
+          options && "keepMounted" in options ? options : undefined,
+        ),
       focus: () => focusWindow(id),
     }),
     [id, isWindowOpen, openWindow, closeWindow, focusWindow],

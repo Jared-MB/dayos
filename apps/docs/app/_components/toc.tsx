@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useDictionary } from "./locale-provider";
 
 type Heading = { id: string; text: string; level: number };
 
@@ -13,6 +14,7 @@ type Heading = { id: string; text: string; level: number };
  * Scanning the DOM means the list cannot be wrong.
  */
 export function TableOfContents() {
+  const d = useDictionary();
   const pathname = usePathname();
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeId, setActiveId] = useState<string>();
@@ -79,8 +81,8 @@ export function TableOfContents() {
 
   return (
     <div className="toc">
-      <nav aria-label="On this page" className="toc-inner">
-        <p className="toc-title">On this page</p>
+      <nav aria-label={d.toc.title} className="toc-inner">
+        <p className="toc-title">{d.toc.title}</p>
         <ul className="toc-list">
           {headings.map((heading, index) => (
             // Keyed by position and not by id alone. Two headings with the same

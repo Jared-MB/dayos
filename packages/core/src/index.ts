@@ -5,6 +5,7 @@
 "use client";
 
 export {
+  type CloseWindowOptions,
   Desktop,
   DesktopApp,
   type DesktopAppProps,
@@ -33,6 +34,7 @@ export {
   type WindowExpandProps,
   WindowHeader,
   type WindowHeaderProps,
+  WindowMinimize,
   WindowName,
   type WindowNameProps,
   type WindowProps,

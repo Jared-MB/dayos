@@ -1,0 +1,163 @@
+---
+title: Escritorio y apps
+description: Los dos componentes sobre los que se construye todo lo demás.
+keywords: Desktop, DesktopApp, DesktopIcon, id, apilado, escritorio
+---
+
+DayOS se apoya en dos componentes principales: `Desktop`, que es el contenedor
+del escritorio, y `DesktopApp`, que es el punto de entrada de cada ventana.
+
+## Desktop
+
+`Desktop` gestiona la lista de ventanas abiertas, su orden de apilado y si en
+ese momento hay un arrastre o un redimensionado en curso.
+
+```tsx
+<Desktop className="h-dvh">
+  {/* las apps van aquí */}
+</Desktop>
+```
+
+No impone ningún tamaño, así que dáselo tú: sin altura el escritorio se colapsa
+y recorta todas las ventanas que haya dentro.
+
+### Wallpaper
+
+La propiedad `wallpaper` recibe la URL de una imagen y la pone como fondo del
+escritorio:
+
+```tsx
+<Desktop className="h-dvh" wallpaper="/wallpaper.jpg" />
+```
+
+Equivale exactamente a escribir tú mismo estas cuatro propiedades de fondo:
+
+```css
+.desktop {
+  background-image: url("/wallpaper.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+```
+
+O con Tailwind:
+
+```tsx
+<Desktop className="h-dvh bg-[url('/wallpaper.jpg')] bg-cover bg-center bg-no-repeat" />
+```
+
+## DesktopApp
+
+Una app se compone de un icono y una ventana.
+
+```tsx
+<DesktopApp id="notes">
+  <DesktopIcon>
+    <DesktopIconText>Notas</DesktopIconText>
+  </DesktopIcon>
+  <Window>
+    <WindowContent>Esta es una ventana</WindowContent>
+  </Window>
+</DesktopApp>
+```
+
+Ninguno de los dos hijos es obligatorio. Una app con icono y sin ventana sirve
+de lanzador para otra cosa; una app con ventana y sin icono es una ventana que
+se abre desde fuera del escritorio, como ocurre con las rutas dinámicas.
+
+### El id
+
+El `id` es la identidad de la ventana: es su clave en la lista de ventanas
+abiertas del escritorio y, con `@dayos/next`, también su href. Una sola
+identidad, declarada una vez.
+
+Puedes omitirlo y DayOS genera uno por ti, lo cual basta para una app a la que
+nunca se hace referencia desde fuera. Cualquier cosa que abra, cierre o enrute
+una ventana por su id necesita uno que elijas tú.
+
+<Callout type="warning" title="Dos apps no pueden compartir un id">
+  Compartirían el estado de la ventana: las dos se abrirían a la vez, las dos se
+  renderizarían por portal en el escritorio y acabarían exactamente en el mismo
+  sitio, así que verías una sola ventana con el contenido equivocado dentro. En
+  desarrollo, DayOS registra un error en la consola; en producción la
+  comprobación ni siquiera se ejecuta.
+</Callout>
+
+### Abrir y cerrar desde la app
+
+`useDesktopApp` te da el control completo para manejar la aplicación desde cualquier lugar dentro del contexto de `DesktopApp`.
+
+```tsx
+function Controls() {
+  const { id, isWindowOpen, open, close, focus } = useDesktopApp();
+
+  return (
+    <button onClick={isWindowOpen ? close : open} type="button">
+      {isWindowOpen ? "Cerrar" : "Abrir"} {id}
+    </button>
+  );
+}
+```
+
+## Iconos
+
+`DesktopIcon` es un botón que abre la ventana de su app con doble clic. También
+responde a <kbd>Enter</kbd> y <kbd>Espacio</kbd>.
+
+```tsx
+<DesktopIcon>
+  <img alt="" src="/icons/notes.svg" />
+  <DesktopIconText>Notas</DesktopIconText>
+</DesktopIcon>
+```
+
+<Callout>
+`DesktopIconText` es un `span` normal; existe para que la etiqueta sea algo a lo
+que dar estilo en lugar de un nodo de texto suelto.
+</Callout>
+
+### Tus manejadores van primero
+
+DayOS compone con los manejadores que le pasas en lugar de reemplazarlos: el
+tuyo se ejecuta primero, y llamar a `preventDefault()` cancela la apertura.
+
+```tsx
+<DesktopIcon
+  onDoubleClick={(event) => {
+    if (!isUnlocked) event.preventDefault();
+  }}
+>
+  <DesktopIconText>Caja fuerte</DesktopIconText>
+</DesktopIcon>
+```
+
+## Leer el escritorio
+
+`useDesktop` expone el estado completo del escritorio y está disponible para
+cualquier cosa dentro de `Desktop`. Con esto puedes construir una barra de
+tareas o un selector de ventanas:
+
+```tsx
+function Taskbar() {
+  const { openWindows, activeWindowId, focusWindow, closeWindow } = useDesktop();
+
+  return (
+    <div className="taskbar">
+      {openWindows.map((id) => (
+        <button
+          data-active={id === activeWindowId ? "" : undefined}
+          key={id}
+          onClick={() => focusWindow(id)}
+          type="button"
+        >
+          {id}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+`openWindows` va en orden de apilado, así que su última entrada es la ventana
+que está delante: exactamente lo que devuelve `activeWindowId`.
