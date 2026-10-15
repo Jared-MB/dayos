@@ -13,6 +13,7 @@ import {
   WindowName,
 } from "@dayos/core";
 import { AnimatedWindowBody } from "./animated-window-body";
+import { Taskbar } from "./taskbar";
 
 export function App() {
   return <MyDesktop />;
@@ -37,6 +38,7 @@ function MyDesktop() {
         </p>
         <textarea aria-label="Draft" className="draft" rows={4} />
       </MyApp>
+      <Taskbar />
     </Desktop>
   );
 }
