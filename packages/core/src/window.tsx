@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -361,43 +362,56 @@ function WindowFrame({
     });
   }, [restoreRect, desktopEl]);
 
-  // The observer must not resubscribe every time the maximized state changes,
-  // so it reads it from a ref.
+  // The observer must not resubscribe every time the maximized or hidden state
+  // changes, so it reads them from refs.
   const isMaximizedRef = useRef(isMaximized);
   isMaximizedRef.current = isMaximized;
+  const hiddenRef = useRef(hidden);
+  hiddenRef.current = hidden;
 
   // `bounds="parent"` only kicks in while dragging: without this, shrinking the
   // viewport leaves windows bigger than the desktop or out of sight.
-  useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      const rnd = rndRef.current;
-      const self = rnd?.getSelfElement();
-      if (!rnd || !self) return;
+  const fitToDesktop = useCallback(() => {
+    const rnd = rndRef.current;
+    const self = rnd?.getSelfElement();
+    // A hidden (minimized) window is `display: none` and measures 0x0: fitting
+    // it would shrink it down to `minWidth` x `minHeight`. It fits once it's
+    // shown again instead.
+    if (!rnd || !self || hiddenRef.current) return;
 
-      const maxWidth = desktopEl.clientWidth;
-      const maxHeight = desktopEl.clientHeight;
+    const maxWidth = desktopEl.clientWidth;
+    const maxHeight = desktopEl.clientHeight;
 
-      if (isMaximizedRef.current) {
-        rnd.updatePosition({ x: 0, y: 0 });
-        rnd.updateSize({ width: maxWidth, height: maxHeight });
-        return;
-      }
+    if (isMaximizedRef.current) {
+      rnd.updatePosition({ x: 0, y: 0 });
+      rnd.updateSize({ width: maxWidth, height: maxHeight });
+      return;
+    }
 
-      const width = Math.min(self.offsetWidth, maxWidth);
-      const height = Math.min(self.offsetHeight, maxHeight);
-      const { x, y } = rnd.getDraggablePosition();
+    const width = Math.min(self.offsetWidth, maxWidth);
+    const height = Math.min(self.offsetHeight, maxHeight);
+    const { x, y } = rnd.getDraggablePosition();
 
-      rnd.updateSize({ width, height });
-      rnd.updatePosition({
-        x: Math.min(Math.max(0, x), maxWidth - width),
-        y: Math.min(Math.max(0, y), maxHeight - height),
-      });
+    rnd.updateSize({ width, height });
+    rnd.updatePosition({
+      x: Math.min(Math.max(0, x), maxWidth - width),
+      y: Math.min(Math.max(0, y), maxHeight - height),
     });
+  }, [desktopEl]);
+
+  useEffect(() => {
+    const observer = new ResizeObserver(fitToDesktop);
 
     observer.observe(desktopEl);
 
     return () => observer.disconnect();
-  }, [desktopEl]);
+  }, [desktopEl, fitToDesktop]);
+
+  // The desktop may have shrunk while the window was hidden, and the observer
+  // skipped it then.
+  useLayoutEffect(() => {
+    if (!hidden) fitToDesktop();
+  }, [hidden, fitToDesktop]);
 
   // Dragging a maximized window restores it and hooks it to the cursor, keeping
   // the cursor over the same proportional point of the title bar.
