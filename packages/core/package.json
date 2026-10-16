@@ -1,6 +1,6 @@
 {
   "name": "@dayos/core",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "A windowed desktop for React, with no opinion on styling or routing.",
   "keywords": [
     "react",
